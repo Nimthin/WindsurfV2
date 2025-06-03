@@ -1,6 +1,21 @@
-# Getting Started with Create React App
+# Nordstrom Competitor Social Media Analytics Dashboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React-based web application for Nordstrom to analyze and compare Instagram and TikTok data of its 11 major competitors, using real-time data from Google Sheets via OpenSheet API.
+
+![Nordstrom Analytics Dashboard](./dashboard-preview.png)
+
+## Features
+
+- **Real-time Data**: Fetches actual social media data from Google Sheets using the OpenSheet API
+- **Instagram Insights**: Visualizes likes, comments, hashtags, sponsored posts, and engagement trends
+- **TikTok Insights**: Analyzes views, shares, likes, creator performance, and engagement rates
+- **Cross-Platform Comparison**: Compares metrics across brands and platforms
+- **Hashtag Explorer**: Visualizes hashtag usage and trends across platforms
+- **Responsive Design**: Fully responsive UI optimized for all device sizes
+- **Dark Mode**: Supports light and dark mode preferences
+- **Data Caching**: Minimizes API calls with local storage caching
+
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app) and enhanced with Tailwind CSS, Framer Motion, React Query, and Chart.js.
 
 ## Available Scripts
 
