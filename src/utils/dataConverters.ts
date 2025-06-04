@@ -66,12 +66,31 @@ export const convertInstagramRawData = (rawData: any[], brand: Brand): Instagram
       }
     }
     
-    // Determine if this is a video post based on available fields
-    const isVideo = 
-      (post.videoViewCount && parseFloat(post.videoViewCount) > 0) || 
-      (post.videoPlayCount && parseFloat(post.videoPlayCount) > 0) || 
-      post.type === 'video' || 
-      post.mediaType === 'video';
+    // Determine finalMediaType and finalProcessedType
+    let excelRawType = post.type ? String(post.type).trim().toLowerCase() : '';
+    let finalMediaType = ''; // This will be "Image", "Video", or "Sidecar"
+    let finalProcessedType = ''; // This will be "image", "video", or "album"
+
+    if (excelRawType === 'image') {
+      finalMediaType = 'Image';
+      finalProcessedType = 'image';
+    } else if (excelRawType === 'video') {
+      finalMediaType = 'Video';
+      finalProcessedType = 'video';
+    } else if (excelRawType === 'sidecar' || excelRawType === 'carousel') {
+      finalMediaType = 'Sidecar';
+      finalProcessedType = 'album';
+    } else {
+      // Fallback if post.type is missing or not one of the above
+      if ((post.videoViewCount && parseFloat(post.videoViewCount) > 0) || (post.videoPlayCount && parseFloat(post.videoPlayCount) > 0)) {
+        finalMediaType = 'Video';
+        finalProcessedType = 'video';
+      } else {
+        // Default to Image if not clearly a video and type is unknown/missing
+        finalMediaType = 'Image';
+        finalProcessedType = 'image';
+      }
+    }
     
     // Analyze sentiment from caption text
     const captionText = post.caption || '';
@@ -86,14 +105,14 @@ export const convertInstagramRawData = (rawData: any[], brand: Brand): Instagram
       commentsCount: parseFloat(post.commentsCount || '0'),
       locationName: post.locationName || undefined,
       isSponsored: post.isSponsored === 'TRUE' || post.isSponsored === true,
-      mediaType: post.mediaType || (isVideo ? 'video' : 'image'),
+      mediaType: finalMediaType,
       mediaUrl: post.url || post.mediaUrl || '',
       mentions,
       hashtags,
       thumbnailUrl: post.url || post.thumbnailUrl || '',
-      type: isVideo ? 'video' : 'image',
-      videoViewCount: isVideo ? parseFloat(post.videoViewCount || '0') : undefined,
-      videoPlayCount: isVideo ? parseFloat(post.videoPlayCount || '0') : undefined,
+      type: finalProcessedType,
+      videoViewCount: finalMediaType === 'Video' ? parseFloat(post.videoViewCount || '0') : undefined,
+      videoPlayCount: finalMediaType === 'Video' ? parseFloat(post.videoPlayCount || '0') : undefined,
       // Add sentiment analysis
       sentimentScore: sentiment.score,
       sentimentLabel: sentiment.label
@@ -111,11 +130,26 @@ export const convertTiktokRawData = (rawData: any[], brand: Brand): TikTokPost[]
   
   return rawData.map((post: any) => {
     // Get the creation time from the specified columns
-    let createTime = post.createTime || post.createTimeISO || new Date().toISOString();
+    let createTimeValue = post.createTimeISO; // Prioritize ISO string
+
+    if (!createTimeValue || !Date.parse(createTimeValue)) { // Check if ISO is invalid or missing
+      if (typeof post.createTime === 'number') {
+        // Assuming post.createTime is in seconds if it's a number like 1.75E+09
+        // If it could also be milliseconds, add a check for its magnitude.
+        // For simplicity here, assume seconds if numeric.
+        createTimeValue = new Date(post.createTime * 1000).toISOString();
+      } else if (post.createTime && typeof post.createTime === 'string' && Date.parse(post.createTime)) {
+        // If post.createTime is a string and parsable
+        createTimeValue = new Date(post.createTime).toISOString();
+      } else {
+        createTimeValue = new Date().toISOString(); // Fallback
+      }
+    }
+    const createTime = createTimeValue;
     
     // Extract hashtags from the specified hashtag columns
     const hashtags: string[] = [];
-    for (let i = 0; i <= 8; i++) {
+    for (let i = 0; i <= 25; i++) { // Changed loop to 25
       const hashtagKey = `hashtags/${i}/name`;
       if (post[hashtagKey] && typeof post[hashtagKey] === 'string' && post[hashtagKey].trim() !== '') {
         hashtags.push(post[hashtagKey].trim());
@@ -124,19 +158,19 @@ export const convertTiktokRawData = (rawData: any[], brand: Brand): TikTokPost[]
     
     // Extract mentions from the specified columns
     const mentions: string[] = [];
-    if (post['mentions/0'] && typeof post['mentions/0'] === 'string') {
-      mentions.push(post['mentions/0']);
-    }
-    if (post['mentions/1'] && typeof post['mentions/1'] === 'string') {
-      mentions.push(post['mentions/1']);
-    }
-    
-    // Extract detailed mentions
-    if (post['detailedMentions/0/name'] && typeof post['detailedMentions/0/name'] === 'string') {
-      mentions.push(post['detailedMentions/0/name']);
-    }
-    if (post['detailedMentions/1/name'] && typeof post['detailedMentions/1/name'] === 'string') {
-      mentions.push(post['detailedMentions/1/name']);
+    for (let i = 0; i <= 25; i++) { // Loop for mentions
+      const mentionKey = `mentions/${i}`;
+      if (post[mentionKey] && typeof post[mentionKey] === 'string' && post[mentionKey].trim() !== '') {
+        if (!mentions.includes(post[mentionKey].trim())) { // Avoid duplicates
+          mentions.push(post[mentionKey].trim());
+        }
+      }
+      const detailedMentionKey = `detailedMentions/${i}/name`;
+      if (post[detailedMentionKey] && typeof post[detailedMentionKey] === 'string' && post[detailedMentionKey].trim() !== '') {
+        if (!mentions.includes(post[detailedMentionKey].trim())) { // Avoid duplicates
+          mentions.push(post[detailedMentionKey].trim());
+        }
+      }
     }
     
     // Use safe number parsing for all count fields using only the specified columns

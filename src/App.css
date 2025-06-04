@@ -14,8 +14,8 @@
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  /* background-color: #282c34; */ /* Commented out to prevent conflict with body background */
+  /* min-height: 100vh; */ /* Commented out to prevent conflict with body background */
   display: flex;
   flex-direction: column;
   align-items: center;

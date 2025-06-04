@@ -4,18 +4,18 @@ import Sentiment from 'sentiment';
 
 // Color palette for charts (brand-specific colors)
 const BRAND_COLORS: Record<Brand, string> = {
-  'Nordstrom': '#00819d',
-  'Macys': '#e21a2c',
-  'Saks': '#000000',  // Updated from 'Sakes' to 'Saks'
-  'Bloomingdales': '#6c4c9f',
-  'Tjmaxx': '#e40046',
-  'Sephora': '#cc0033',
-  'Ulta': '#e5007d',
-  'Aritzia': '#333333',
-  'American Eagle': '#0057b8',
-  'Walmart': '#0071ce',
-  'Amazon Beauty': '#ff9900',
-  'Revolve': '#f15a22'
+  'Nordstrom': '#0A2342', // nordstrom-navy
+  'Macys': '#718096', // gray-600
+  'Saks': '#718096', // gray-600
+  'Bloomingdales': '#718096', // gray-600
+  'Tjmaxx': '#718096', // gray-600
+  'Sephora': '#718096', // gray-600
+  'Ulta': '#718096', // gray-600
+  'Aritzia': '#718096', // gray-600
+  'American Eagle': '#718096', // gray-600
+  'Walmart': '#718096', // gray-600
+  'Amazon Beauty': '#718096', // gray-600
+  'Revolve': '#718096' // gray-600
 };
 
 // Generate colors for multiple datasets
@@ -368,20 +368,8 @@ export const generateTopHashtagsChart = (
       {
         label: `${brand} Top Hashtags`,
         data,
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.7)',
-          'rgba(54, 162, 235, 0.7)',
-          'rgba(255, 206, 86, 0.7)',
-          'rgba(75, 192, 192, 0.7)',
-          'rgba(153, 102, 255, 0.7)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)'
-        ],
+        backgroundColor: '#1E3A5F', // nordstrom-navy-light
+        borderColor: '#1E3A5F', // nordstrom-navy-light
         borderWidth: 1
       }
     ]

@@ -13,8 +13,10 @@ const INSTAGRAM_FILE_NAMES: Partial<Record<Brand, string>> = {
   'Saks': 'Insta_new_saks.xlsx',  // Updated from 'Sakes' to 'Saks'
   'Sephora': 'Insta_new_sephora.xlsx',
   'Tjmaxx': 'Insta_new_tjmaxx.xlsx',
-  'Walmart': 'Insta_new_walmart.xlsx'
-  // Note: We don't have files for Revolve and Ulta in the Instagram folder
+  'Walmart': 'Insta_new_walmart.xlsx',
+  'Ulta': 'Insta_new_ulta.xlsx',
+  'Revolve': 'Insta_new_revolve.xlsx',
+  // Note: File mappings for Ulta and Revolve added. Ensure corresponding Excel files exist in public/Data/Instagram/.
 };
 
 // Map brand names to file names for TikTok

@@ -17,36 +17,36 @@ const TikTokEngagementCard: React.FC<TikTokEngagementCardProps> = ({
 }) => {
   return (
     <motion.div
-      custom={4}
+      custom={4} // Ensure this custom index is unique if used with others in the same list
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white shadow-lg"
+      className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transform hover:scale-[1.01] transition-all duration-300 ease-out"
     >
       <div className="flex justify-between items-start">
         <div>
-          <p className="text-sm font-medium opacity-80">Engagement Rate</p>
-          <h3 className="text-2xl font-bold mt-1">{(tikTokEngagementRate * 100).toFixed(2)}%</h3>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Engagement Rate (TikTok)</p>
+          <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{(tikTokEngagementRate * 100).toFixed(2)}%</h3>
         </div>
-        <BiIcons.BiTrendingUp className="text-3xl opacity-80" />
+        <BiIcons.BiTrendingUp className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
       </div>
-      <div className="mt-3 text-sm">
+      <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
         <div className="flex justify-between">
-          <p className="opacity-80">Nordstrom</p>
+          <p>Nordstrom</p>
           <p className="font-medium">{(tikTokEngagementRate * 100).toFixed(2)}%</p>
         </div>
         <div className="flex justify-between mt-1">
-          <p className="opacity-80">{selectedCompetitor}</p>
+          <p>{selectedCompetitor}</p>
           <p className="font-medium">{(competitorTikTokEngagementRate * 100).toFixed(2)}%</p>
         </div>
         {tikTokEngagementRate > 0 && competitorTikTokEngagementRate > 0 && (
-          <div className="mt-2 text-xs">
-            <p className="opacity-90">
+          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+            <p>
               {tikTokEngagementRate > competitorTikTokEngagementRate 
-                ? `Nordstrom has ${((tikTokEngagementRate - competitorTikTokEngagementRate) * 100).toFixed(2)}% higher engagement`
+                ? `Nordstrom has ${((tikTokEngagementRate - competitorTikTokEngagementRate) * 100).toFixed(2)}% higher engagement.`
                 : tikTokEngagementRate < competitorTikTokEngagementRate
-                  ? `${selectedCompetitor} has ${((competitorTikTokEngagementRate - tikTokEngagementRate) * 100).toFixed(2)}% higher engagement`
-                  : 'Equal engagement rates'}
+                  ? `${selectedCompetitor} has ${((competitorTikTokEngagementRate - tikTokEngagementRate) * 100).toFixed(2)}% higher engagement.`
+                  : 'Equal engagement rates.'}
             </p>
           </div>
         )}

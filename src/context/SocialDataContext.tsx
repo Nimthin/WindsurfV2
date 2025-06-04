@@ -119,29 +119,20 @@ export const SocialDataProvider: React.FC<{ children: ReactNode }> = ({ children
       lastFetched: { ...loadedData.lastFetched }
     };
     
-    // Filter by platform first
-    if (filterOptions.platform === 'All' || filterOptions.platform === 'Instagram') {
-      // Include Instagram data only for selected brands
-      filterOptions.brands.forEach(brand => {
-        if (loadedData.instagram[brand]) {
-          filteredData.instagram[brand] = JSON.parse(JSON.stringify(loadedData.instagram[brand]));
-          
-        } else {
-          filteredData.instagram[brand] = null;
-        }
-      });
-    }
-    
-    if (filterOptions.platform === 'All' || filterOptions.platform === 'TikTok') {
-      // Include TikTok data only for selected brands
-      filterOptions.brands.forEach(brand => {
-        if (loadedData.tiktok[brand]) {
-          filteredData.tiktok[brand] = JSON.parse(JSON.stringify(loadedData.tiktok[brand]));
-        } else {
-          filteredData.tiktok[brand] = null;
-        }
-      });
-    }
+    // Always populate both platforms for selected brands initially
+    // The actual display in components will then use filterOptions.platform to show relevant data.
+    filterOptions.brands.forEach(brand => {
+      if (loadedData.instagram[brand]) {
+        filteredData.instagram[brand] = JSON.parse(JSON.stringify(loadedData.instagram[brand]));
+      } else {
+        filteredData.instagram[brand] = null;
+      }
+      if (loadedData.tiktok[brand]) {
+        filteredData.tiktok[brand] = JSON.parse(JSON.stringify(loadedData.tiktok[brand]));
+      } else {
+        filteredData.tiktok[brand] = null;
+      }
+    });
 
     // Now filter by months for each platform
     const monthMap: Record<string, number> = {
@@ -195,9 +186,21 @@ export const SocialDataProvider: React.FC<{ children: ReactNode }> = ({ children
     
     // Filter TikTok posts by month
     for (const brand of filterOptions.brands) {
-      const brandData = filteredData.tiktok[brand];
+      const brandData = filteredData.tiktok[brand]; // Data for the current brand before date/month filtering
+
       if (brandData && brandData.posts && brandData.posts.length > 0) {
-        // Filter posts by selected months and date range
+        // Diagnostic Log 1: Before date/month filtering
+        console.log(
+          `[DEBUG TIKTOK PRE-FILTER - ${brand}]`,
+          {
+            platformFilter: filterOptions.platform,
+            monthFilter: filterOptions.selectedMonth,
+            dateRangeFilter: filterOptions.dateRange,
+            numPostsBeforeDateFilter: brandData.posts.length,
+            sampleCreateTimes: brandData.posts.slice(0, 3).map(p => p.createTime)
+          }
+        );
+
         const filteredPosts = brandData.posts.filter((post: TikTokPost) => {
           if (!post.createTime) return false;
           
@@ -224,6 +227,14 @@ export const SocialDataProvider: React.FC<{ children: ReactNode }> = ({ children
             return false;
           }
         });
+
+        // Diagnostic Log 2: After date/month filtering
+        console.log(
+          `[DEBUG TIKTOK POST-FILTER - ${brand}]`,
+          {
+            numPostsAfterDateFilter: filteredPosts.length
+          }
+        );
         
         // Update the filtered data
         filteredData.tiktok[brand] = {
@@ -234,6 +245,9 @@ export const SocialDataProvider: React.FC<{ children: ReactNode }> = ({ children
             engagementRate: calculateTikTokEngagementRate(post)
           }))
         };
+      } else {
+        // Diagnostic Log 3: No TikTok data for brand before date/month filter
+        console.log(`[DEBUG TIKTOK PRE-FILTER - ${brand}] No posts found for this brand initially.`);
       }
     }
     
@@ -463,7 +477,8 @@ export const SocialDataProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [
     filterOptions.platform, 
     filterOptions.brands, 
-    filterOptions.dateRange, 
+    filterOptions.dateRange,
+    filterOptions.selectedMonth, // Added selectedMonth
     socialData, 
     isLoading, 
     error

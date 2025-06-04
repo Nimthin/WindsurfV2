@@ -23,7 +23,6 @@ import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import Sentiment from 'sentiment';
 import SentimentAnalysis from './SentimentAnalysis';
 import EngagementSection from './EngagementSection';
-import ReachSection from './ReachSection';
 import HashtagSection from './HashtagSection';
 import { Brand, InstagramPost, TikTokPost } from '../../types';
 import { ToggleButton, ToggleButtonGroup, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
@@ -256,11 +255,27 @@ const DashboardOverview: React.FC = () => {
     }
 
     // Calculate averages and rates for Nordstrom
+    // General averages for all Instagram posts
     if (totalInstagramPosts > 0) {
-      avgInstagramLikes = totalInstagramLikes / totalInstagramPosts;
-      avgInstagramComments = totalInstagramComments / totalInstagramPosts;
-      instagramEngagementRate = ((totalInstagramLikes + totalInstagramComments) / totalInstagramPosts) / 100;
+      avgInstagramLikes = totalInstagramLikes / totalInstagramPosts; // Remains average for all posts
+      avgInstagramComments = parseFloat((totalInstagramComments / totalInstagramPosts).toFixed(1)); // Remains average for all posts
+    } else {
+      avgInstagramLikes = 0;
+      avgInstagramComments = 0.0;
     }
+
+    // Instagram Video Engagement Rate for Nordstrom
+    const nordstromInstagramVideoPosts = socialData.instagram['Nordstrom']?.posts.filter(p => (p as InstagramPost).mediaType === 'Video') as InstagramPost[] || [];
+    let nordstromVideoLikes = 0;
+    let nordstromVideoComments = 0;
+    let nordstromVideoViews = 0;
+    if (nordstromInstagramVideoPosts.length > 0) {
+      nordstromVideoLikes = nordstromInstagramVideoPosts.reduce((sum, p) => sum + (p.likesCount || 0), 0);
+      nordstromVideoComments = nordstromInstagramVideoPosts.reduce((sum, p) => sum + (p.commentsCount || 0), 0);
+      nordstromVideoViews = nordstromInstagramVideoPosts.reduce((sum, p) => sum + (p.videoViewCount || 0), 0);
+    }
+    const rawNordstromVideoER = nordstromVideoViews > 0 ? ((nordstromVideoLikes + nordstromVideoComments) / nordstromVideoViews) * 100 : 0;
+    instagramEngagementRate = parseFloat(rawNordstromVideoER.toFixed(1));
     
     if (totalTikTokPosts > 0) {
       avgTikTokViews = totalTikTokViews / totalTikTokPosts;
@@ -270,11 +285,27 @@ const DashboardOverview: React.FC = () => {
     }
     
     // Calculate averages and rates for competitor
+    // General averages for all Instagram posts for competitor
     if (competitorInstagramPosts > 0) {
-      competitorAvgInstagramLikes = competitorInstagramLikes / competitorInstagramPosts;
-      competitorAvgInstagramComments = competitorInstagramComments / competitorInstagramPosts;
-      competitorInstagramEngagementRate = ((competitorInstagramLikes + competitorInstagramComments) / competitorInstagramPosts) / 100;
+      competitorAvgInstagramLikes = competitorInstagramLikes / competitorInstagramPosts; // Remains average for all posts
+      competitorAvgInstagramComments = parseFloat((competitorInstagramComments / competitorInstagramPosts).toFixed(1)); // Remains average for all posts
+    } else {
+      competitorAvgInstagramLikes = 0;
+      competitorAvgInstagramComments = 0.0;
     }
+
+    // Instagram Video Engagement Rate for Competitor
+    const competitorInstagramVideoPosts = socialData.instagram[selectedCompetitor]?.posts.filter(p => (p as InstagramPost).mediaType === 'Video') as InstagramPost[] || [];
+    let competitorVideoLikes = 0;
+    let competitorVideoComments = 0;
+    let competitorVideoViews = 0;
+    if (competitorInstagramVideoPosts.length > 0) {
+      competitorVideoLikes = competitorInstagramVideoPosts.reduce((sum, p) => sum + (p.likesCount || 0), 0);
+      competitorVideoComments = competitorInstagramVideoPosts.reduce((sum, p) => sum + (p.commentsCount || 0), 0);
+      competitorVideoViews = competitorInstagramVideoPosts.reduce((sum, p) => sum + (p.videoViewCount || 0), 0);
+    }
+    const rawCompetitorVideoER = competitorVideoViews > 0 ? ((competitorVideoLikes + competitorVideoComments) / competitorVideoViews) * 100 : 0;
+    competitorInstagramEngagementRate = parseFloat(rawCompetitorVideoER.toFixed(1));
     
     if (competitorTikTokPosts > 0) {
       competitorAvgTikTokViews = competitorTikTokViews / competitorTikTokPosts;
@@ -600,41 +631,77 @@ const DashboardOverview: React.FC = () => {
       legend: {
         position: 'top' as const,
         labels: {
-          color: darkMode ? 'white' : 'black',
+          color: darkMode ? 'rgba(255, 255, 255, 0.85)' : '#191919', // nordstrom-black for light
           font: {
-            size: 12
+            size: 12,
+            family: 'Inter',
           }
         },
       },
       title: {
-        display: false,
+        display: false, // Keep title display off by default, can be overridden per chart
       },
       tooltip: {
-        backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-        titleColor: darkMode ? 'white' : 'black',
-        bodyColor: darkMode ? 'white' : 'black',
-        borderColor: darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: darkMode ? '#051424' : '#FFFFFF', // nordstrom-navy-dark for dark, white for light
+        titleColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : '#191919',
+        bodyColor: darkMode ? 'rgba(255, 255, 255, 0.8)' : '#191919',
+        borderColor: darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
         borderWidth: 1,
+        padding: 10,
+        cornerRadius: 6,
+        titleFont: {
+          family: 'Inter',
+        },
+        bodyFont: {
+          family: 'Inter',
+        },
       },
     },
     scales: {
       x: {
         ticks: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+          color: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(55, 65, 81, 0.9)', // gray-700 for light
+          font: {
+            family: 'Inter',
+          },
         },
         grid: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          color: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          drawBorder: false,
         },
+        title: { // Added for completeness, though not displayed by default
+          font: {
+            family: 'Inter',
+          }
+        }
       },
       y: {
         ticks: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+          color: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(55, 65, 81, 0.9)', // gray-700 for light
+          font: {
+            family: 'Inter',
+          },
         },
         grid: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          color: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          drawBorder: false,
         },
+        title: { // Added for completeness
+          font: {
+            family: 'Inter',
+          }
+        }
       },
     },
+    elements: {
+      bar: {
+        borderRadius: 6,
+      },
+      line: {
+        tension: 0.4,
+      },
+    },
+    // animation: { duration: 1000, easing: 'easeInOutQuart' } // Default animations are usually good
   };
 
   if (isLoading) {
@@ -705,11 +772,11 @@ const DashboardOverview: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className={`rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md p-4`}
+          className={`rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg p-6`} /* Updated styling */
         >
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">
-              <BiIcons.BiStats className="inline-block mr-2 text-purple-500" />
+          <div className="flex justify-between items-center mb-4"> {/* mb-4 can be adjusted if p-6 provides enough space */}
+            <h2 className="text-xl font-semibold text-nordstrom-blue"> {/* Updated styling */}
+              <BiIcons.BiStats className="inline-block mr-2 text-nordstrom-blue" /> {/* Updated styling */}
               Key Performance Indicators
             </h2>
             
@@ -766,32 +833,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">Total Posts</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalInstagramPosts)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Posts</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalInstagramPosts)}</h3>
                     </div>
-                    <FaIcons.FaInstagram className="text-3xl opacity-80" />
+                    <FaIcons.FaInstagram className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom</p>
+                      <p>Nordstrom</p>
                       <p className="font-medium">{formatNumber(metrics.totalInstagramPosts)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor}</p>
+                      <p>{metrics.selectedCompetitor}</p>
                       <p className="font-medium">{formatNumber(metrics.competitorInstagramPosts)}</p>
                     </div>
                     {metrics.totalInstagramPosts > 0 && metrics.competitorInstagramPosts > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.totalInstagramPosts > metrics.competitorInstagramPosts 
-                            ? `Nordstrom has ${formatNumber(metrics.totalInstagramPosts - metrics.competitorInstagramPosts)} more posts`
+                            ? `Nordstrom has ${formatNumber(metrics.totalInstagramPosts - metrics.competitorInstagramPosts)} more posts.`
                             : metrics.totalInstagramPosts < metrics.competitorInstagramPosts
-                              ? `${metrics.selectedCompetitor} has ${formatNumber(metrics.competitorInstagramPosts - metrics.totalInstagramPosts)} more posts`
-                              : 'Equal number of posts'}
+                              ? `${metrics.selectedCompetitor} has ${formatNumber(metrics.competitorInstagramPosts - metrics.totalInstagramPosts)} more posts.`
+                              : 'Equal number of posts.'}
                         </p>
                       </div>
                     )}
@@ -804,32 +871,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">Instagram Likes</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalInstagramLikes)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Instagram Likes</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalInstagramLikes)}</h3>
                     </div>
-                    <AiIcons.AiFillHeart className="text-3xl opacity-80" />
+                    <AiIcons.AiFillHeart className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom Avg</p>
+                      <p>Nordstrom Avg</p>
                       <p className="font-medium">{formatNumber(metrics.avgInstagramLikes)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor} Avg</p>
+                      <p>{metrics.selectedCompetitor} Avg</p>
                       <p className="font-medium">{formatNumber(metrics.competitorAvgInstagramLikes)}</p>
                     </div>
                     {metrics.avgInstagramLikes > 0 && metrics.competitorAvgInstagramLikes > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.avgInstagramLikes > metrics.competitorAvgInstagramLikes 
-                            ? `Nordstrom gets ${formatNumber(metrics.avgInstagramLikes - metrics.competitorAvgInstagramLikes)} more likes per post`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgInstagramLikes - metrics.competitorAvgInstagramLikes)} more likes.`
                             : metrics.avgInstagramLikes < metrics.competitorAvgInstagramLikes
-                              ? `${metrics.selectedCompetitor} gets ${formatNumber(metrics.competitorAvgInstagramLikes - metrics.avgInstagramLikes)} more likes per post`
-                              : 'Equal average likes per post'}
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgInstagramLikes - metrics.avgInstagramLikes)} more likes.`
+                              : 'Equal average likes.'}
                         </p>
                       </div>
                     )}
@@ -842,32 +909,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">Instagram Comments</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalInstagramComments)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Instagram Comments</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalInstagramComments)}</h3>
                     </div>
-                    <FaIcons.FaComments className="text-3xl opacity-80" />
+                    <FaIcons.FaComments className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom Avg</p>
+                      <p>Nordstrom Avg</p>
                       <p className="font-medium">{formatNumber(metrics.avgInstagramComments)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor} Avg</p>
+                      <p>{metrics.selectedCompetitor} Avg</p>
                       <p className="font-medium">{formatNumber(metrics.competitorAvgInstagramComments)}</p>
                     </div>
                     {metrics.avgInstagramComments > 0 && metrics.competitorAvgInstagramComments > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.avgInstagramComments > metrics.competitorAvgInstagramComments 
-                            ? `Nordstrom gets ${formatNumber(metrics.avgInstagramComments - metrics.competitorAvgInstagramComments)} more comments per post`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgInstagramComments - metrics.competitorAvgInstagramComments)} more comments.`
                             : metrics.avgInstagramComments < metrics.competitorAvgInstagramComments
-                              ? `${metrics.selectedCompetitor} gets ${formatNumber(metrics.competitorAvgInstagramComments - metrics.avgInstagramComments)} more comments per post`
-                              : 'Equal average comments per post'}
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgInstagramComments - metrics.avgInstagramComments)} more comments.`
+                              : 'Equal average comments.'}
                         </p>
                       </div>
                     )}
@@ -893,32 +960,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-black to-gray-800 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">Total Posts</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalTikTokPosts)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Posts</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokPosts)}</h3>
                     </div>
-                    <FaIcons.FaTiktok className="text-3xl opacity-80" />
+                    <FaIcons.FaTiktok className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom</p>
+                      <p>Nordstrom</p>
                       <p className="font-medium">{formatNumber(metrics.totalTikTokPosts)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor}</p>
+                      <p>{metrics.selectedCompetitor}</p>
                       <p className="font-medium">{formatNumber(metrics.competitorTikTokPosts)}</p>
                     </div>
-                    {metrics.totalTikTokPosts > 0 && metrics.competitorTikTokPosts > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                     {metrics.totalTikTokPosts > 0 && metrics.competitorTikTokPosts > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.totalTikTokPosts > metrics.competitorTikTokPosts 
-                            ? `Nordstrom has ${formatNumber(metrics.totalTikTokPosts - metrics.competitorTikTokPosts)} more posts`
+                            ? `Nordstrom has ${formatNumber(metrics.totalTikTokPosts - metrics.competitorTikTokPosts)} more posts.`
                             : metrics.totalTikTokPosts < metrics.competitorTikTokPosts
-                              ? `${metrics.selectedCompetitor} has ${formatNumber(metrics.competitorTikTokPosts - metrics.totalTikTokPosts)} more posts`
-                              : 'Equal number of posts'}
+                              ? `${metrics.selectedCompetitor} has ${formatNumber(metrics.competitorTikTokPosts - metrics.totalTikTokPosts)} more posts.`
+                              : 'Equal number of posts.'}
                         </p>
                       </div>
                     )}
@@ -931,32 +998,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">TikTok Views</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalTikTokViews)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Views</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokViews)}</h3>
                     </div>
-                    <AiIcons.AiOutlineEye className="text-3xl opacity-80" />
+                    <AiIcons.AiOutlineEye className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom Avg</p>
+                      <p>Nordstrom Avg</p>
                       <p className="font-medium">{formatNumber(metrics.avgTikTokViews)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor} Avg</p>
+                      <p>{metrics.selectedCompetitor} Avg</p>
                       <p className="font-medium">{formatNumber(metrics.competitorAvgTikTokViews)}</p>
                     </div>
                     {metrics.avgTikTokViews > 0 && metrics.competitorAvgTikTokViews > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.avgTikTokViews > metrics.competitorAvgTikTokViews 
-                            ? `Nordstrom gets ${formatNumber(metrics.avgTikTokViews - metrics.competitorAvgTikTokViews)} more views per post`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokViews - metrics.competitorAvgTikTokViews)} more views.`
                             : metrics.avgTikTokViews < metrics.competitorAvgTikTokViews
-                              ? `${metrics.selectedCompetitor} gets ${formatNumber(metrics.competitorAvgTikTokViews - metrics.avgTikTokViews)} more views per post`
-                              : 'Equal average views per post'}
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokViews - metrics.avgTikTokViews)} more views.`
+                              : 'Equal average views.'}
                         </p>
                       </div>
                     )}
@@ -969,32 +1036,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">TikTok Likes</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalTikTokLikes)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Likes</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokLikes)}</h3>
                     </div>
-                    <AiIcons.AiFillHeart className="text-3xl opacity-80" />
+                    <AiIcons.AiFillHeart className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom Avg</p>
+                      <p>Nordstrom Avg</p>
                       <p className="font-medium">{formatNumber(metrics.avgTikTokLikes)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor} Avg</p>
+                      <p>{metrics.selectedCompetitor} Avg</p>
                       <p className="font-medium">{formatNumber(metrics.competitorAvgTikTokLikes)}</p>
                     </div>
                     {metrics.avgTikTokLikes > 0 && metrics.competitorAvgTikTokLikes > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.avgTikTokLikes > metrics.competitorAvgTikTokLikes 
-                            ? `Nordstrom gets ${formatNumber(metrics.avgTikTokLikes - metrics.competitorAvgTikTokLikes)} more likes per post`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokLikes - metrics.competitorAvgTikTokLikes)} more likes.`
                             : metrics.avgTikTokLikes < metrics.competitorAvgTikTokLikes
-                              ? `${metrics.selectedCompetitor} gets ${formatNumber(metrics.competitorAvgTikTokLikes - metrics.avgTikTokLikes)} more likes per post`
-                              : 'Equal average likes per post'}
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokLikes - metrics.avgTikTokLikes)} more likes.`
+                              : 'Equal average likes.'}
                         </p>
                       </div>
                     )}
@@ -1007,32 +1074,32 @@ const DashboardOverview: React.FC = () => {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white shadow-lg"
+                  className="bg-white dark:bg-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium opacity-80">TikTok Shares</p>
-                      <h3 className="text-2xl font-bold mt-1">{formatNumber(metrics.totalTikTokShares)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Shares</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokShares)}</h3>
                     </div>
-                    <FaIcons.FaShare className="text-3xl opacity-80" />
+                    <FaIcons.FaShare className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
-                  <div className="mt-3 text-sm">
+                  <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
-                      <p className="opacity-80">Nordstrom Avg</p>
+                      <p>Nordstrom Avg</p>
                       <p className="font-medium">{formatNumber(metrics.avgTikTokShares)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
-                      <p className="opacity-80">{metrics.selectedCompetitor} Avg</p>
+                      <p>{metrics.selectedCompetitor} Avg</p>
                       <p className="font-medium">{formatNumber(metrics.competitorAvgTikTokShares)}</p>
                     </div>
                     {metrics.avgTikTokShares > 0 && metrics.competitorAvgTikTokShares > 0 && (
-                      <div className="mt-2 text-xs">
-                        <p className="opacity-90">
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p>
                           {metrics.avgTikTokShares > metrics.competitorAvgTikTokShares 
-                            ? `Nordstrom gets ${formatNumber(metrics.avgTikTokShares - metrics.competitorAvgTikTokShares)} more shares per post`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokShares - metrics.competitorAvgTikTokShares)} more shares.`
                             : metrics.avgTikTokShares < metrics.competitorAvgTikTokShares
-                              ? `${metrics.selectedCompetitor} gets ${formatNumber(metrics.competitorAvgTikTokShares - metrics.avgTikTokShares)} more shares per post`
-                              : 'Equal average shares per post'}
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokShares - metrics.avgTikTokShares)} more shares.`
+                              : 'Equal average shares.'}
                         </p>
                       </div>
                     )}
@@ -1051,36 +1118,6 @@ const DashboardOverview: React.FC = () => {
           </div>
         </motion.div>
       </div>
-      
-      {/* Platform Toggle */}
-      <div className={`flex justify-center mb-6 p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}>
-        <ToggleButtonGroup
-          value={activePlatform}
-          exclusive
-          onChange={handlePlatformChange}
-          aria-label="platform"
-          color="primary"
-          sx={{ 
-            '& .MuiToggleButton-root': {
-              color: darkMode ? 'white' : 'inherit',
-              borderColor: darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)'
-            },
-            '& .Mui-selected': {
-              backgroundColor: darkMode ? 'rgba(25, 118, 210, 0.5)' : 'rgba(25, 118, 210, 0.1)',
-              '&:hover': {
-                backgroundColor: darkMode ? 'rgba(25, 118, 210, 0.6)' : 'rgba(25, 118, 210, 0.2)'
-              }
-            }
-          }}
-        >
-          <ToggleButton value="Instagram" aria-label="Instagram">
-            <FaIcons.FaInstagram className="mr-2" /> Instagram
-          </ToggleButton>
-          <ToggleButton value="TikTok" aria-label="TikTok">
-            <FaIcons.FaTiktok className="mr-2" /> TikTok
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </div>
 
       {/* Sentiment Analysis Section */}
       <div className="mt-8">
@@ -1088,11 +1125,11 @@ const DashboardOverview: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className={`rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
+          className={`rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg p-6`} /* Updated styling */
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-bold">
-              <FaIcons.FaChartPie className="inline-block mr-2 text-blue-500" />
+          <div className="mb-4 flex justify-between items-center"> {/* Removed p-4 and border from title div, parent has p-6 now */}
+            <h2 className="text-xl font-semibold text-nordstrom-blue"> {/* Updated styling */}
+              <FaIcons.FaChartPie className="inline-block mr-2 text-nordstrom-blue" /> {/* Updated styling */}
               Sentiment Analysis
             </h2>
             <div className="flex space-x-2">
@@ -1104,6 +1141,23 @@ const DashboardOverview: React.FC = () => {
                 }}
                 size="small"
                 aria-label="platform selection"
+                sx={{
+                  '& .MuiToggleButtonGroup-grouped': {
+                     margin: 0.5, border: 0, '&.Mui-disabled': { border: 0 },
+                    '&:not(:first-of-type)': { borderRadius: '8px' },
+                    '&:first-of-type': { borderRadius: '8px' },
+                  },
+                  '& .MuiToggleButton-root': {
+                    textTransform: 'none', padding: '4px 10px', fontSize: '0.8125rem', // Smaller for these sections
+                    color: darkMode ? '#A0AEC0' : '#004170',
+                    borderColor: darkMode ? '#4A5568' : '#CBD5E0', borderRadius: '8px',
+                    '&.Mui-selected': {
+                      color: 'white', backgroundColor: '#004170', borderColor: '#004170',
+                      '&:hover': { backgroundColor: '#003459' },
+                    },
+                    '&:hover': { backgroundColor: darkMode ? 'rgba(0, 65, 112, 0.15)' : 'rgba(0, 65, 112, 0.05)'},
+                  },
+                }}
               >
                 <ToggleButton value="Instagram" aria-label="Instagram">
                   <FaIcons.FaInstagram className="mr-1" /> Instagram
@@ -1141,7 +1195,6 @@ const DashboardOverview: React.FC = () => {
         </motion.div>
       </div>
       
-      {/* Followers Section removed as per user request */}
       
       {/* Engagement Section */}
       <div className="mt-8">
@@ -1149,11 +1202,11 @@ const DashboardOverview: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.9 }}
-          className={`rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
+          className={`rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg p-6`} /* Updated styling */
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-bold">
-              <AiIcons.AiOutlineInteraction className="inline-block mr-2 text-green-500" />
+          <div className="flex justify-between items-center mb-4"> {/* Removed p-4, border-b. Added mb-4 */}
+            <h2 className="text-xl font-semibold text-nordstrom-blue"> {/* Updated styling */}
+              <AiIcons.AiOutlineInteraction className="inline-block mr-2 text-nordstrom-blue" /> {/* Updated styling */}
               Engagement Analytics
             </h2>
             <div className="flex space-x-2">
@@ -1165,6 +1218,23 @@ const DashboardOverview: React.FC = () => {
                 }}
                 size="small"
                 aria-label="platform selection"
+                sx={{
+                  '& .MuiToggleButtonGroup-grouped': {
+                     margin: 0.5, border: 0, '&.Mui-disabled': { border: 0 },
+                    '&:not(:first-of-type)': { borderRadius: '8px' },
+                    '&:first-of-type': { borderRadius: '8px' },
+                  },
+                  '& .MuiToggleButton-root': {
+                    textTransform: 'none', padding: '4px 10px', fontSize: '0.8125rem',
+                    color: darkMode ? '#A0AEC0' : '#004170',
+                    borderColor: darkMode ? '#4A5568' : '#CBD5E0', borderRadius: '8px',
+                    '&.Mui-selected': {
+                      color: 'white', backgroundColor: '#004170', borderColor: '#004170',
+                      '&:hover': { backgroundColor: '#003459' },
+                    },
+                    '&:hover': { backgroundColor: darkMode ? 'rgba(0, 65, 112, 0.15)' : 'rgba(0, 65, 112, 0.05)'},
+                  },
+                }}
               >
                 <ToggleButton value="Instagram" aria-label="Instagram">
                   <FaIcons.FaInstagram className="mr-1" /> Instagram
@@ -1202,76 +1272,17 @@ const DashboardOverview: React.FC = () => {
         </motion.div>
       </div>
       
-      {/* Reach Section */}
-      <div className="mt-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.0 }}
-          className={`rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-        >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-bold">
-              <MdIcons.MdOutlineWifiTethering className="inline-block mr-2 text-amber-500" />
-              Reach Analytics
-            </h2>
-            <div className="flex space-x-2">
-              <ToggleButtonGroup
-                value={activePlatform}
-                exclusive
-                onChange={(e, newPlatform) => {
-                  if (newPlatform) setActivePlatform(newPlatform);
-                }}
-                size="small"
-                aria-label="platform selection"
-              >
-                <ToggleButton value="Instagram" aria-label="Instagram">
-                  <FaIcons.FaInstagram className="mr-1" /> Instagram
-                </ToggleButton>
-                <ToggleButton value="TikTok" aria-label="TikTok">
-                  <FaIcons.FaTiktok className="mr-1" /> TikTok
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </div>
-          </div>
-          
-          {/* Instagram Reach Analytics */}
-          {activePlatform === 'Instagram' && (
-            <ReachSection 
-              platform="Instagram" 
-              selectedBrands={selectedBrands} 
-              posts={selectedBrands.reduce((acc, brand) => {
-                acc[brand] = socialData.instagram[brand]?.posts || [];
-                return acc;
-              }, {} as Record<Brand, InstagramPost[] | TikTokPost[]>)}
-            />
-          )}
-          
-          {/* TikTok Reach Analytics */}
-          {activePlatform === 'TikTok' && (
-            <ReachSection 
-              platform="TikTok" 
-              selectedBrands={selectedBrands} 
-              posts={selectedBrands.reduce((acc, brand) => {
-                acc[brand] = socialData.tiktok[brand]?.posts || [];
-                return acc;
-              }, {} as Record<Brand, InstagramPost[] | TikTokPost[]>)}
-            />
-          )}
-        </motion.div>
-      </div>
-      
       {/* Hashtag Section */}
       <div className="mt-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.1 }}
-          className={`rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
+          className={`rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg p-6`} /* Updated styling */
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 className="text-xl font-bold">
-              <FaIcons.FaHashtag className="inline-block mr-2 text-blue-500" />
+          <div className="flex justify-between items-center mb-4"> {/* Removed p-4, border-b. Added mb-4 */}
+            <h2 className="text-xl font-semibold text-nordstrom-blue"> {/* Updated styling */}
+              <FaIcons.FaHashtag className="inline-block mr-2 text-nordstrom-blue" /> {/* Updated styling */}
               Hashtag Analytics
             </h2>
             <div className="flex space-x-2">
@@ -1283,6 +1294,23 @@ const DashboardOverview: React.FC = () => {
                 }}
                 size="small"
                 aria-label="platform selection"
+                sx={{
+                  '& .MuiToggleButtonGroup-grouped': {
+                     margin: 0.5, border: 0, '&.Mui-disabled': { border: 0 },
+                    '&:not(:first-of-type)': { borderRadius: '8px' },
+                    '&:first-of-type': { borderRadius: '8px' },
+                  },
+                  '& .MuiToggleButton-root': {
+                    textTransform: 'none', padding: '4px 10px', fontSize: '0.8125rem',
+                    color: darkMode ? '#A0AEC0' : '#004170',
+                    borderColor: darkMode ? '#4A5568' : '#CBD5E0', borderRadius: '8px',
+                    '&.Mui-selected': {
+                      color: 'white', backgroundColor: '#004170', borderColor: '#004170',
+                      '&:hover': { backgroundColor: '#003459' },
+                    },
+                    '&:hover': { backgroundColor: darkMode ? 'rgba(0, 65, 112, 0.15)' : 'rgba(0, 65, 112, 0.05)'},
+                  },
+                }}
               >
                 <ToggleButton value="Instagram" aria-label="Instagram">
                   <FaIcons.FaInstagram className="mr-1" /> Instagram
@@ -1319,109 +1347,6 @@ const DashboardOverview: React.FC = () => {
           )}
         </motion.div>
       </div>
-
-      {/* Quick Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-        {/* Nordstrom Instagram Stats Card */}
-        {activePlatform === 'Instagram' && (
-          <motion.div
-            custom={0}
-            initial="hidden"
-            animate="visible"
-            variants={cardVariants}
-            className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md border-l-4 border-blue-500`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Nordstrom Instagram</p>
-                <h3 className="text-xl font-bold mt-1">
-                  {formatNumber(
-                    socialData.instagram['Nordstrom'] && socialData.instagram['Nordstrom']?.posts
-                      ? socialData.instagram['Nordstrom']?.posts.reduce((sum, post) => sum + post.likesCount + post.commentsCount, 0) 
-                      : 0
-                  )}
-                </h3>
-                <div className="flex flex-col">
-                  <p className="text-sm mt-2">
-                    <span className="text-green-500">↑ {
-                      socialData.instagram['Nordstrom'] && socialData.instagram['Nordstrom']?.posts && socialData.instagram['Nordstrom']?.posts.length > 0 
-                        ? formatNumber(Math.round(
-                            socialData.instagram['Nordstrom']?.posts.reduce((sum, post) => sum + post.likesCount, 0) 
-                            / socialData.instagram['Nordstrom']?.posts.length
-                          )) 
-                        : 0
-                    }</span> avg. likes per post
-                  </p>
-                </div>
-              </div>
-              <div className={`p-3 rounded-full ${darkMode ? 'bg-purple-900' : 'bg-purple-100'}`}>
-                <span className="text-xl text-purple-500">📷</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-      </div>
-
-      {/* Engagement Rate Section */}
-      <div className="grid grid-cols-1 gap-6 mt-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-        >
-          <h3 className="text-lg font-semibold mb-4">{activePlatform} Engagement Rate by Brand</h3>
-          <div className="h-96">
-            {isChartDataEmpty(engagementRateChart) ? (
-              <EmptyChartFallback message={`No ${activePlatform} engagement data available for the selected brands`} />
-            ) : (
-              <Line 
-                data={engagementRateChart} 
-                options={{
-                  ...chartOptions,
-                  scales: {
-                    ...chartOptions.scales,
-                    y: {
-                      ...chartOptions.scales.y,
-                      title: {
-                        display: true,
-                        text: activePlatform === 'TikTok' ? 'Engagement Rate (%)' : 'Engagement',
-                        color: darkMode ? 'white' : 'black',
-                      }
-                    }
-                  },
-                  plugins: {
-                    ...chartOptions.plugins,
-                    tooltip: {
-                      ...chartOptions.plugins.tooltip,
-                      callbacks: {
-                        label: function(context) {
-                          const label = context.dataset.label || '';
-                          const value = context.raw as number;
-                          if (label.includes('Video') || activePlatform === 'TikTok') {
-                            return `${label}: ${value.toFixed(2)}%`;
-                          } else {
-                            return `${label}: ${formatNumber(value)}`;
-                          }
-                        }
-                      }
-                    }
-                  }
-                }}
-              />
-            )}
-          </div>
-          <div className="mt-2 text-sm text-gray-500">
-            <p>
-              {activePlatform === 'Instagram' ? 
-                'For Instagram, image post engagement is measured by likes + comments, while video post engagement rate is calculated as ((likes + comments) / views) * 100%.' : 
-                'For TikTok, engagement rate is calculated as ((likes + comments + shares + collects) / views) * 100%.'
-              }
-            </p>
-          </div>
-        </motion.div>
-      </div>
       
       {/* Social Platform Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
@@ -1440,60 +1365,6 @@ const DashboardOverview: React.FC = () => {
               ) : (
                 <Bar data={instagramEngagementChart} options={chartOptions} />
               )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Instagram Reach Chart */}
-        {filterOptions.platform === 'Instagram' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55 }}
-            className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-          >
-            <h3 className="text-lg font-semibold mb-4">Instagram Reach by Brand</h3>
-            <div className="h-80">
-              {/* Create Instagram Reach chart data */}
-              {(() => {
-
-
-                // Define the chart data
-                const reachChartData = {
-                  labels: selectedBrands,
-                  datasets: [
-                    {
-                      label: 'Instagram Reach',
-                      data: selectedBrands.map(brand => {
-                        const brandData = socialData.instagram[brand];
-                        if (!brandData?.posts) return 0;
-
-                        return brandData.posts.reduce((sum, post) => {
-                          const videoViews = Number(post?.videoViewCount || 0);
-                          const likes = Number(post?.likesCount || 0);
-                          const comments = Number(post?.commentsCount || 0);
-
-                          if (videoViews > 0) {
-                            return sum + videoViews; // Use actual video views for videos
-                          } else {
-                            return sum + (likes + comments); // Estimate reach for images
-                          }
-                        }, 0);
-                      }),
-                      backgroundColor: 'rgba(156, 39, 176, 0.5)',
-                      borderColor: 'rgba(156, 39, 176, 1)',
-                      borderWidth: 1,
-                    }
-                  ]
-                };
-                
-                // Return the appropriate component based on data availability
-                if (isChartDataEmpty(reachChartData)) {
-                  return <EmptyChartFallback message="No Instagram reach data available for the selected brands" />;
-                } else {
-                  return <Bar data={reachChartData} options={chartOptions} />;
-                }
-              })()}
             </div>
           </motion.div>
         )}

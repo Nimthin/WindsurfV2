@@ -481,15 +481,16 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ platform, selecte
   }
 
   return (
-    <div className="mt-8 p-4 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Sentiment Analysis</h2>
-      <p className="text-sm text-gray-600 mb-6">
+    // Root div styling is removed as it will be handled by the parent in DashboardOverview.tsx
+    <div>
+      {/* Title is now handled by DashboardOverview.tsx, descriptive paragraph can remain or be moved */}
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
         Sentiment analysis of {platform} posts for selected brands based on post text/captions.
       </p>
       
       {checkAndFixTikTokData ? (
-        <div className="p-6 text-center bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-yellow-700 mb-4">
+        <div className="p-6 text-center bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border border-yellow-300 dark:border-yellow-700">
+          <p className="text-yellow-700 dark:text-yellow-300 mb-4">
             <strong>Note:</strong> TikTok sentiment analysis requires text data to be properly loaded. 
             Please ensure your TikTok data includes captions or text content.
           </p>
@@ -497,8 +498,8 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ platform, selecte
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {/* Bar Chart - Sentiment Distribution by Brand */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Sentiment Distribution by Brand</h3>
+          <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow"> {/* Adjusted inner card styling */}
+            <h3 className="text-md font-semibold text-gray-700 dark:text-gray-200 mb-3">Sentiment Distribution by Brand</h3>
             <div className="h-80">
               {sentimentDistributionByBrand.datasets[0].data.every(d => d === 0) &&
                sentimentDistributionByBrand.datasets[1].data.every(d => d === 0) &&
@@ -511,17 +512,18 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ platform, selecte
           </div>
           
           {/* Line Chart - Average Sentiment Score Over Time - Side by Side Comparison */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Average Sentiment Score Over Time</h3>
+          <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow"> {/* Adjusted inner card styling */}
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-md font-semibold text-gray-700 dark:text-gray-200">Average Sentiment Score Over Time</h3>
               <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                <InputLabel id="competitor-select-label">Competitor Brand</InputLabel>
+                <InputLabel id="competitor-select-label" sx={{color: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : undefined }}>Competitor Brand</InputLabel>
                 <Select
                   labelId="competitor-select-label"
                   id="competitor-select"
                   value={selectedCompetitor}
                   onChange={(e: SelectChangeEvent) => setSelectedCompetitor(e.target.value as Brand)}
                   label="Competitor Brand"
+                  sx={{color: (theme) => theme.palette.mode === 'dark' ? 'white' : undefined, '& .MuiOutlinedInput-notchedOutline': {borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.23)' : undefined}, '& .MuiSvgIcon-root': {color: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : undefined}}}
                 >
                   {selectedBrands.filter(brand => brand !== mainBrand).map(brand => (
                     <MenuItem key={brand} value={brand}>{brand}</MenuItem>
@@ -529,13 +531,13 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ platform, selecte
                 </Select>
               </FormControl>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Nordstrom Chart */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h4 className="text-md font-medium mb-2 text-center">{mainBrand}</h4>
+              <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 text-center">{mainBrand}</h4>
                 <div className="h-64">
                   {averageSentimentOverTimeByBrand.labels.length === 0 ? (
-                    <EmptyChartFallback message="No time-series sentiment data available" />
+                    <EmptyChartFallback message="No time-series sentiment data" />
                   ) : (
                     <Line 
                       data={{
@@ -549,11 +551,11 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ platform, selecte
               </div>
               
               {/* Competitor Chart */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h4 className="text-md font-medium mb-2 text-center">{selectedCompetitor}</h4>
+              <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 text-center">{selectedCompetitor}</h4>
                 <div className="h-64">
                   {averageSentimentOverTimeByBrand.labels.length === 0 ? (
-                    <EmptyChartFallback message="No time-series sentiment data available" />
+                    <EmptyChartFallback message="No time-series sentiment data" />
                   ) : (
                     <Line 
                       data={{
@@ -567,104 +569,7 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ platform, selecte
               </div>
             </div>
           </div>
-          
-          {/* Pie Chart - Overall Sentiment Distribution - Side by Side Comparison */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Overall Sentiment Distribution</h3>
-              <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                <InputLabel id="pie-competitor-select-label">Competitor Brand</InputLabel>
-                <Select
-                  labelId="pie-competitor-select-label"
-                  id="pie-competitor-select"
-                  value={selectedCompetitor}
-                  onChange={(e: SelectChangeEvent) => setSelectedCompetitor(e.target.value as Brand)}
-                  label="Competitor Brand"
-                >
-                  {selectedBrands.filter(brand => brand !== mainBrand).map(brand => (
-                    <MenuItem key={brand} value={brand}>{brand}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Nordstrom Chart */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h4 className="text-md font-medium mb-2 text-center">{mainBrand}</h4>
-                <div className="h-64">
-                  {nordstromSentimentDistribution.datasets[0].data.every(d => d === 0) ? (
-                    <EmptyChartFallback message="No sentiment data available" />
-                  ) : (
-                    <Pie data={nordstromSentimentDistribution} options={pieOptions} />
-                  )}
-                </div>
-              </div>
-              
-              {/* Competitor Chart */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h4 className="text-md font-medium mb-2 text-center">{selectedCompetitor}</h4>
-                <div className="h-64">
-                  {competitorSentimentDistribution.datasets[0].data.every(d => d === 0) ? (
-                    <EmptyChartFallback message="No sentiment data available" />
-                  ) : (
-                    <Pie data={competitorSentimentDistribution} options={pieOptions} />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Stacked Area Chart - Sentiment Volume Over Time - Side by Side Comparison */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Sentiment Volume Over Time</h3>
-              <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                <InputLabel id="volume-competitor-select-label">Competitor Brand</InputLabel>
-                <Select
-                  labelId="volume-competitor-select-label"
-                  id="volume-competitor-select"
-                  value={selectedCompetitor}
-                  onChange={(e: SelectChangeEvent) => setSelectedCompetitor(e.target.value as Brand)}
-                  label="Competitor Brand"
-                >
-                  {selectedBrands.filter(brand => brand !== mainBrand).map(brand => (
-                    <MenuItem key={brand} value={brand}>{brand}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Nordstrom Chart */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h4 className="text-md font-medium mb-2 text-center">{mainBrand}</h4>
-                <div className="h-64">
-                  {nordstromSentimentOverTime.labels.length === 0 ? (
-                    <EmptyChartFallback message="No time-series sentiment data available" />
-                  ) : (
-                    <Bar 
-                      data={nordstromSentimentOverTime} 
-                      options={stackedBarOptions} 
-                    />
-                  )}
-                </div>
-              </div>
-              
-              {/* Competitor Chart */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h4 className="text-md font-medium mb-2 text-center">{selectedCompetitor}</h4>
-                <div className="h-64">
-                  {competitorSentimentOverTime.labels.length === 0 ? (
-                    <EmptyChartFallback message="No time-series sentiment data available" />
-                  ) : (
-                    <Bar 
-                      data={competitorSentimentOverTime} 
-                      options={stackedBarOptions} 
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
       )}
     </div>

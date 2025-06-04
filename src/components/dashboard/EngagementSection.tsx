@@ -1,19 +1,23 @@
-import React, { useMemo, useState } from 'react';
-import { Bar, Pie } from 'react-chartjs-2';
+import React, { useMemo } from 'react'; // Removed useState
+import { Bar, Line } from 'react-chartjs-2'; // Removed Pie
 import { 
   Chart as ChartJS, 
   CategoryScale, 
   LinearScale, 
   BarElement, 
+  PointElement, // Added for Line chart
+  LineElement,  // Added for Line chart
   Title, 
   Tooltip, 
   Legend,
   ArcElement,
-  ChartOptions
+  Filler, // Added for Line chart fill
+  ChartOptions,
+  ChartData
 } from 'chart.js';
 import { Brand, InstagramPost, TikTokPost, SocialPlatform } from '../../types';
 import EmptyChartFallback from '../common/EmptyChartFallback';
-import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+// FormControl, InputLabel, MenuItem, Select removed as competitor selection is removed
 import { useSocialData } from '../../context/SocialDataContext';
 
 // Register ChartJS components
@@ -21,10 +25,13 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement, // Added for Line chart
+  LineElement,  // Added for Line chart
   Title,
   Tooltip,
   Legend,
-  ArcElement
+  ArcElement,
+  Filler // Added for Line chart fill
 );
 
 type EngagementSectionProps = {
@@ -39,7 +46,7 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
   posts 
 }) => {
   // Get dark mode from context
-  const { darkMode } = useSocialData();
+  const { darkMode = false } = useSocialData() || {};
   
   // Vibrant color palette - more visible than pastel
   const vibrantColors = [
@@ -57,462 +64,274 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
     'rgba(96, 125, 139, 0.8)',   // Blue Grey
   ];
 
-  // Nordstrom is our main brand
-  const mainBrand: Brand = 'Nordstrom';
-  
-  // State for competitor brand selection
-  const [selectedCompetitor, setSelectedCompetitor] = useState<Brand>('Macys');
+  // Removed mainBrand and selectedCompetitor state
 
-  // Check if we have data
   const hasData = useMemo(() => {
     return selectedBrands.some(brand => (posts[brand]?.length || 0) > 0);
   }, [selectedBrands, posts]);
 
-  // Handle competitor brand change
-  const handleCompetitorChange = (event: any) => {
-    setSelectedCompetitor(event.target.value as Brand);
-  };
+  // Removed handleCompetitorChange
 
-  // Instagram Image Engagement Data
+  // Instagram Image Engagement Data - now a Line chart processing all selectedBrands
   const instagramImageEngagementData = useMemo(() => {
     if (platform !== 'Instagram' || !hasData) {
-      return {
-        labels: [],
-        datasets: []
-      };
+      return { labels: [], datasets: [] };
     }
 
-    // Filter for image posts (IMAGE or CAROUSEL_ALBUM)
-    const brandData = selectedBrands.map((brand, index) => {
+    const processedBrandData = selectedBrands.map(brand => {
       const brandPosts = posts[brand] || [];
       const imagePosts = brandPosts.filter(post => {
         const instagramPost = post as InstagramPost;
         return instagramPost.mediaType === 'Image' || instagramPost.mediaType === 'Sidecar';
       });
-
-      // Skip competitor brands if not selected
-      if (brand !== mainBrand && brand !== selectedCompetitor) {
-        return null;
-      }
-
-      // Calculate engagement metrics
       const totalLikes = imagePosts.reduce((sum, post) => sum + ((post as InstagramPost).likesCount || 0), 0);
       const totalComments = imagePosts.reduce((sum, post) => sum + ((post as InstagramPost).commentsCount || 0), 0);
-      const avgLikes = imagePosts.length > 0 ? totalLikes / imagePosts.length : 0;
-      const avgComments = imagePosts.length > 0 ? totalComments / imagePosts.length : 0;
-      
-      // Calculate engagement rate for image posts (likes + comments)
-      const engagementRate = totalLikes + totalComments;
-
       return {
-        brand,
-        avgLikes,
-        avgComments,
-        engagementRate,
+        brandName: brand,
+        engagementValue: totalLikes + totalComments,
         postCount: imagePosts.length
       };
-    }).filter(Boolean); // Remove null entries
+    }).filter(data => data.postCount > 0);
 
-    // Create chart data
     return {
-      labels: brandData.map(data => data?.brand),
+      labels: processedBrandData.map(data => data.brandName),
       datasets: [
         {
-          label: 'Avg. Likes per Image Post',
-          data: brandData.map(data => data?.avgLikes),
-          backgroundColor: vibrantColors[0],
-          borderColor: vibrantColors[0].replace('0.8', '1'),
-          borderWidth: 1,
+          label: 'Image Engagement (Likes + Comments)',
+          data: processedBrandData.map(data => data.engagementValue),
+          borderColor: '#004170', // Nordstrom Blue
+          backgroundColor: 'rgba(0, 65, 112, 0.1)', // Light Nordstrom Blue fill
+          fill: true,
+          tension: 0.4,
         },
-        {
-          label: 'Avg. Comments per Image Post',
-          data: brandData.map(data => data?.avgComments),
-          backgroundColor: vibrantColors[1],
-          borderColor: vibrantColors[1].replace('0.8', '1'),
-          borderWidth: 1,
-        },
-        {
-          label: 'Image Engagement Rate',
-          data: brandData.map(data => data?.engagementRate),
-          backgroundColor: vibrantColors[2],
-          borderColor: vibrantColors[2].replace('0.8', '1'),
-          borderWidth: 1,
-        }
-      ]
+      ],
     };
-  }, [platform, selectedBrands, posts, hasData, mainBrand, selectedCompetitor, vibrantColors]);
+  }, [platform, selectedBrands, posts, hasData]);
 
-  // Instagram Video & TikTok Engagement Data
+  // Define types for processed data
+  type InstagramBrandData = {
+    brandName: Brand;
+    engagementRate: number;
+    postCount: number;
+  };
+
+  type TikTokBrandData = {
+    brandName: Brand;
+    metrics: Array<{ label: string; value: number }>;
+    postCount: number;
+  };
+
+  // Video Engagement Data (Instagram: Line chart, TikTok: Bar chart)
   const videoEngagementData = useMemo(() => {
     if (!hasData) {
-      return {
-        labels: [],
-        datasets: []
-      };
+      return { labels: [], datasets: [] };
     }
 
-    // For Instagram, filter for video posts
-    // For TikTok, use all posts
-    const brandData = selectedBrands.map((brand, index) => {
+    const processedBrandData = selectedBrands.map(brand => {
       const brandPosts = posts[brand] || [];
       let filteredPosts = brandPosts;
-      
-      if (platform === 'Instagram') {
-        // Filter for video posts only
-        filteredPosts = brandPosts.filter(post => {
-          const instagramPost = post as InstagramPost;
-          return instagramPost.mediaType === 'Video';
-        });
 
-        // Skip competitor brands if not selected
-        if (brand !== mainBrand && brand !== selectedCompetitor) {
-          return null;
-        }
+      if (platform === 'Instagram') {
+        filteredPosts = brandPosts.filter(post => (post as InstagramPost).mediaType === 'Video');
       }
 
-      // Calculate metrics based on platform
+      if (filteredPosts.length === 0) return null; // Skip brands with no relevant posts
+
       if (platform === 'Instagram') {
-        // Instagram video metrics
         const totalLikes = filteredPosts.reduce((sum, post) => sum + ((post as InstagramPost).likesCount || 0), 0);
         const totalComments = filteredPosts.reduce((sum, post) => sum + ((post as InstagramPost).commentsCount || 0), 0);
         const totalViews = filteredPosts.reduce((sum, post) => sum + ((post as InstagramPost).videoViewCount || 0), 0);
-        const avgLikes = filteredPosts.length > 0 ? totalLikes / filteredPosts.length : 0;
-        const avgComments = filteredPosts.length > 0 ? totalComments / filteredPosts.length : 0;
-        
-        // Calculate video engagement rate: ((likes + comments) / views) * 100
-        const engagementRate = totalViews > 0 ? ((totalLikes + totalComments) / totalViews) * 100 : 0;
-
+        const rate = totalViews > 0 ? parseFloat((((totalLikes + totalComments) / totalViews) * 100).toFixed(1)) : 0;
+        return { brandName: brand, engagementRate: rate, postCount: filteredPosts.length };
+      } else { // TikTok
+        const totalLikes = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).diggCount || 0), 0);
+        const totalComments = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).commentCount || 0), 0);
+        const totalShares = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).shareCount || 0), 0);
+        const totalViews = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).playCount || 0), 0);
+        const engagementRate = totalViews > 0 ? parseFloat((((totalLikes + totalComments + totalShares) / totalViews) * 100).toFixed(1)) : 0;
         return {
-          brand,
-          metrics: [
-            { label: 'Avg. Likes', value: avgLikes },
-            { label: 'Avg. Comments', value: avgComments },
-            { label: 'Engagement Rate (%)', value: engagementRate }
-          ],
-          postCount: filteredPosts.length
-        };
-      } else {
-        // TikTok metrics
-        // Log TikTok data for debugging
-        console.log(`TikTok data for ${brand}:`, filteredPosts);
-        
-        const totalLikes = filteredPosts.reduce((sum, post) => {
-          const tiktokPost = post as TikTokPost;
-          return sum + (tiktokPost.diggCount || 0);
-        }, 0);
-        
-        const totalComments = filteredPosts.reduce((sum, post) => {
-          const tiktokPost = post as TikTokPost;
-          return sum + (tiktokPost.commentCount || 0);
-        }, 0);
-        
-        const totalShares = filteredPosts.reduce((sum, post) => {
-          const tiktokPost = post as TikTokPost;
-          return sum + (tiktokPost.shareCount || 0);
-        }, 0);
-        
-        const totalViews = filteredPosts.reduce((sum, post) => {
-          const tiktokPost = post as TikTokPost;
-          return sum + (tiktokPost.playCount || 0);
-        }, 0);
-        
-        const avgLikes = filteredPosts.length > 0 ? totalLikes / filteredPosts.length : 0;
-        const avgComments = filteredPosts.length > 0 ? totalComments / filteredPosts.length : 0;
-        const avgShares = filteredPosts.length > 0 ? totalShares / filteredPosts.length : 0;
-        
-        // Calculate engagement rate: ((likes + comments + shares) / views) * 100
-        const engagementRate = totalViews > 0 ? ((totalLikes + totalComments + totalShares) / totalViews) * 100 : 0;
-
-        return {
-          brand,
-          metrics: [
-            { label: 'Avg. Likes', value: avgLikes },
-            { label: 'Avg. Comments', value: avgComments },
-            { label: 'Avg. Shares', value: avgShares },
+          brandName: brand,
+          metrics: [ // For TikTok Bar chart
+            { label: 'Avg. Likes', value: filteredPosts.length > 0 ? totalLikes / filteredPosts.length : 0 },
+            { label: 'Avg. Comments', value: filteredPosts.length > 0 ? totalComments / filteredPosts.length : 0 },
+            { label: 'Avg. Shares', value: filteredPosts.length > 0 ? totalShares / filteredPosts.length : 0 },
             { label: 'Engagement Rate (%)', value: engagementRate }
           ],
           postCount: filteredPosts.length
         };
       }
-    }).filter(Boolean); // Remove null entries
+    }).filter(Boolean);
 
-    // Create datasets based on platform
+    // Safe type casting after filtering out null values
+    const typedBrandData = processedBrandData as (InstagramBrandData | TikTokBrandData)[];
+    
     if (platform === 'Instagram') {
+      // Type guard to ensure we're working with Instagram data
+      const instagramData = typedBrandData.filter((data): data is InstagramBrandData => 
+        'engagementRate' in data && !('metrics' in data)
+      );
+      
       return {
-        labels: brandData.map(data => data?.brand),
+        labels: instagramData.map(data => data.brandName),
         datasets: [
-          {
-            label: 'Avg. Likes per Video Post',
-            data: brandData.map(data => data?.metrics[0].value),
-            backgroundColor: vibrantColors[2],
-            borderColor: vibrantColors[2].replace('0.8', '1'),
-            borderWidth: 1,
-          },
-          {
-            label: 'Avg. Comments per Video Post',
-            data: brandData.map(data => data?.metrics[1].value),
-            backgroundColor: vibrantColors[3],
-            borderColor: vibrantColors[3].replace('0.8', '1'),
-            borderWidth: 1,
-          },
           {
             label: 'Video Engagement Rate (%)',
-            data: brandData.map(data => data?.metrics[2].value),
-            backgroundColor: vibrantColors[4],
-            borderColor: vibrantColors[4].replace('0.8', '1'),
-            borderWidth: 1,
-          }
-        ]
+            data: instagramData.map(data => data.engagementRate),
+            borderColor: '#004170',
+            backgroundColor: 'rgba(0, 65, 112, 0.1)',
+            fill: true,
+            tension: 0.4,
+          },
+        ],
       };
-    } else {
+    } else { // TikTok
+      // Type guard to ensure we're working with TikTok data
+      const tiktokData = typedBrandData.filter((data): data is TikTokBrandData => 
+        'metrics' in data
+      );
+      
       return {
-        labels: brandData.map(data => data?.brand),
-        datasets: [
+        labels: tiktokData.map(data => data.brandName),
+        datasets: [ // Assuming original structure for TikTok bar chart is preferred
           {
             label: 'Avg. Likes',
-            data: brandData.map(data => data?.metrics[0].value),
+            data: tiktokData.map(data => data.metrics[0].value),
             backgroundColor: vibrantColors[0],
             borderColor: vibrantColors[0].replace('0.8', '1'),
             borderWidth: 1,
           },
           {
             label: 'Avg. Comments',
-            data: brandData.map(data => data?.metrics[1].value),
+            data: tiktokData.map(data => data.metrics[1].value),
             backgroundColor: vibrantColors[1],
             borderColor: vibrantColors[1].replace('0.8', '1'),
             borderWidth: 1,
           },
           {
             label: 'Avg. Shares',
-            data: brandData.map(data => data?.metrics[2].value),
+            data: tiktokData.map(data => data.metrics[2].value),
             backgroundColor: vibrantColors[2],
             borderColor: vibrantColors[2].replace('0.8', '1'),
             borderWidth: 1,
           },
           {
             label: 'Engagement Rate (%)',
-            data: brandData.map(data => data?.metrics[3].value),
+            data: tiktokData.map(data => data.metrics[3].value),
             backgroundColor: vibrantColors[3],
             borderColor: vibrantColors[3].replace('0.8', '1'),
             borderWidth: 1,
+          },
+        ],
+      };
+    }
+  }, [platform, selectedBrands, posts, hasData, vibrantColors]);
+
+  // Removed engagementDistributionData useMemo hook
+
+  // Chart options (can be common for Line and Bar, or split if needed)
+  const commonChartOptions = useMemo(() => {
+    const options: ChartOptions<'bar' | 'line'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+          labels: {
+            color: darkMode ? 'rgba(255, 255, 255, 0.8)' : undefined
           }
-        ]
-      };
-    }
-  }, [platform, selectedBrands, posts, hasData, mainBrand, selectedCompetitor, vibrantColors]);
-
-  // Engagement Type Distribution
-  const engagementDistributionData = useMemo(() => {
-    if (!hasData) {
-      return {
-        labels: [],
-        datasets: []
-      };
-    }
-
-    // Calculate total engagement by type
-    const engagementTypes: Record<string, number> = {};
-    
-    if (platform === 'Instagram') {
-      // Only use main brand for distribution
-      const brandPosts = posts[mainBrand] || [];
-      
-      let totalLikes = 0;
-      let totalComments = 0;
-      
-      brandPosts.forEach(post => {
-        const instagramPost = post as InstagramPost;
-        totalLikes += instagramPost.likesCount || 0;
-        totalComments += instagramPost.commentsCount || 0;
-      });
-      
-      engagementTypes['Likes'] = totalLikes;
-      engagementTypes['Comments'] = totalComments;
-    } else {
-      // Only use main brand for distribution
-      const brandPosts = posts[mainBrand] || [];
-      
-      let totalLikes = 0;
-      let totalComments = 0;
-      let totalShares = 0;
-      
-      brandPosts.forEach(post => {
-        const tiktokPost = post as TikTokPost;
-        totalLikes += tiktokPost.diggCount || 0;
-        totalComments += tiktokPost.commentCount || 0;
-        totalShares += tiktokPost.shareCount || 0;
-      });
-      
-      engagementTypes['Likes'] = totalLikes;
-      engagementTypes['Comments'] = totalComments;
-      engagementTypes['Shares'] = totalShares;
-    }
-
-    // Create pie chart data
-    return {
-      labels: Object.keys(engagementTypes),
-      datasets: [
-        {
-          data: Object.values(engagementTypes),
-          backgroundColor: vibrantColors.slice(0, Object.keys(engagementTypes).length),
-          borderColor: vibrantColors.slice(0, Object.keys(engagementTypes).length).map(color => color.replace('0.8', '1')),
-          borderWidth: 1,
+        },
+        title: {
+          display: false
+        },
+        tooltip: {
+          titleColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
+          bodyColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
+          backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : undefined
         }
-      ]
+      },
+      scales: {
+        x: {
+          grid: {
+            color: darkMode ? 'rgba(255, 255, 255, 0.1)' : undefined
+          },
+          ticks: {
+            color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: darkMode ? 'rgba(255, 255, 255, 0.1)' : undefined
+          },
+          ticks: {
+            color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
+          }
+        }
+      }
     };
-  }, [platform, posts, hasData, mainBrand, vibrantColors]);
+    return options;
+  }, [darkMode]);
 
-  // Chart options
-  const barOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.8)' : undefined
-        }
-      },
-      title: {
-        display: false
-      },
-      tooltip: {
-        titleColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
-        bodyColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
-        backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : undefined
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.1)' : undefined
+  const pieOptions = useMemo(() => {
+    const options: ChartOptions<'pie'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right' as const,
+          labels: {
+            color: darkMode ? 'rgba(255, 255, 255, 0.8)' : undefined
+          }
         },
-        ticks: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
-        }
-      },
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.1)' : undefined
-        },
-        ticks: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
+        tooltip: {
+          titleColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
+          bodyColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
+          backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : undefined
         }
       }
-    }
-  };
-
-  const pieOptions: ChartOptions<'pie'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right' as const,
-        labels: {
-          color: darkMode ? 'rgba(255, 255, 255, 0.8)' : undefined
-        }
-      },
-      tooltip: {
-        titleColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
-        bodyColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
-        backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : undefined
-      }
-    }
-  };
+    };
+    return options;
+  }, [darkMode]);
 
   return (
-    <div className="p-4">
-      {platform === 'Instagram' && (
-        <div className="mb-6">
-          <FormControl variant="outlined" size="small" className="min-w-[200px]" sx={{
-            '& .MuiInputLabel-root': {
-              color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
-            },
-            '& .MuiOutlinedInput-root': {
-              color: darkMode ? 'white' : undefined,
-              '& fieldset': {
-                borderColor: darkMode ? 'rgba(255, 255, 255, 0.23)' : undefined
-              },
-              '&:hover fieldset': {
-                borderColor: darkMode ? 'rgba(255, 255, 255, 0.5)' : undefined
-              }
-            },
-            '& .MuiSelect-icon': {
-              color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
-            }
-          }}>
-            <InputLabel id="competitor-select-label">Competitor Brand</InputLabel>
-            <Select
-              labelId="competitor-select-label"
-              id="competitor-select"
-              value={selectedCompetitor}
-              onChange={handleCompetitorChange}
-              label="Competitor Brand"
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    bgcolor: darkMode ? 'rgb(45, 45, 45)' : undefined,
-                    color: darkMode ? 'white' : undefined,
-                    '& .MuiMenuItem-root:hover': {
-                      bgcolor: darkMode ? 'rgba(255, 255, 255, 0.08)' : undefined
-                    }
-                  }
-                }
-              }}
-            >
-              {selectedBrands.filter(brand => brand !== mainBrand).map((brand) => (
-                <MenuItem key={brand} value={brand}>{brand}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </div>
-      )}
+    // Removed p-4 from root, padding is handled by parent card in DashboardOverview
+    <div>
+      {/* Competitor selection dropdown removed */}
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Instagram Image Engagement Chart */}
         {platform === 'Instagram' && (
-          <div className={`p-6 rounded-lg shadow-sm ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} lg:col-span-2`}>
-            <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              Instagram Image Post Engagement
+          <div className={`p-4 rounded-lg shadow ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'} w-full`}>
+            <h3 className={`text-md font-semibold mb-3 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              Instagram Image Engagement
             </h3>
             <div className="h-80">
               {!hasData || instagramImageEngagementData.labels.length === 0 ? (
                 <EmptyChartFallback message="No image post data available" />
               ) : (
-                <Bar data={instagramImageEngagementData} options={barOptions} />
+                <Line data={instagramImageEngagementData as ChartData<'line'>} options={commonChartOptions as ChartOptions<'line'>} />
               )}
             </div>
           </div>
         )}
         
         {/* Video Engagement Chart (Instagram or TikTok) */}
-        <div className={`p-6 rounded-lg shadow-sm ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} ${platform === 'Instagram' ? 'lg:col-span-2' : 'lg:col-span-2'}`}>
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {platform === 'Instagram' ? 'Instagram Video Post Engagement' : 'TikTok Engagement'}
+        <div className={`p-4 rounded-lg shadow ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'} w-full`}>
+          <h3 className={`text-md font-semibold mb-3 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+            {platform === 'Instagram' ? 'Instagram Video Engagement Rate' : 'TikTok Engagement'}
           </h3>
           <div className="h-80">
             {!hasData || videoEngagementData.labels.length === 0 ? (
               <EmptyChartFallback message={`No ${platform === 'Instagram' ? 'video post' : 'TikTok'} data available`} />
             ) : (
-              <Bar data={videoEngagementData} options={barOptions} />
+              platform === 'Instagram' ?
+                <Line data={videoEngagementData as ChartData<'line'>} options={commonChartOptions as ChartOptions<'line'>} /> :
+                <Bar data={videoEngagementData as ChartData<'bar'>} options={commonChartOptions as ChartOptions<'bar'>} />
             )}
           </div>
         </div>
         
-        {/* Engagement Distribution Pie Chart */}
-        <div className={`p-6 rounded-lg shadow-sm ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            {platform} Engagement Distribution
-          </h3>
-          <div className="h-80">
-            {!hasData || engagementDistributionData.labels.length === 0 ? (
-              <EmptyChartFallback message="No engagement data available" />
-            ) : (
-              <Pie data={engagementDistributionData} options={pieOptions} />
-            )}
-          </div>
-        </div>
+        {/* Engagement Distribution Pie Chart Removed */}
       </div>
     </div>
   );
