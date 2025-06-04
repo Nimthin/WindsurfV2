@@ -115,6 +115,7 @@ export interface TikTokPost {
   mentions?: string[];
   videoUrl: string;
   coverUrl: string;
+  engagementRate?: number;
 }
 
 export interface TikTokData {

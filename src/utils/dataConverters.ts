@@ -193,6 +193,12 @@ export const convertTiktokRawData = (rawData: any[], brand: Brand): TikTokPost[]
     // Analyze sentiment from post text
     const postText = post.text || '';
     const sentiment = analyzeSentiment(postText);
+
+    // Calculate engagement rate
+    const currentPlayCount = playCount || 0; // Ensure playCount is a number, default to 0
+    const engagementRate = currentPlayCount > 0
+      ? (((diggCount || 0) + (commentCount || 0) + (shareCount || 0) + (collectCount || 0)) / currentPlayCount) * 100
+      : 0;
     
     return {
       id: `${brand}-tt-${Math.random().toString(36).substr(2, 9)}`,
@@ -230,6 +236,7 @@ export const convertTiktokRawData = (rawData: any[], brand: Brand): TikTokPost[]
       // Add sentiment analysis
       sentimentScore: sentiment.score,
       sentimentLabel: sentiment.label,
+      engagementRate: parseFloat(engagementRate.toFixed(2)), // Add engagement rate
       // Add location data
       locationMeta: {
         city: post['locationMeta/city'] || '',
