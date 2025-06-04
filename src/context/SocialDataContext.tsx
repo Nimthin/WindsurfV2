@@ -56,7 +56,7 @@ export const AVAILABLE_MONTHS = ['February', 'March', 'April', 'May', 'All (Feb-
 
 // Initial filter options
 export const initialFilterOptions: FilterOptions = {
-  platform: 'All',
+  platform: 'Instagram', // Set Instagram as default platform
   brands: ALL_BRANDS,
   dateRange: {
     start: new Date(new Date().setMonth(new Date().getMonth() - 3)), // Last 3 months

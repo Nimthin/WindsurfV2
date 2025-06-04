@@ -65,7 +65,16 @@ const DashboardOverview: React.FC = () => {
   // Define state hooks at the top level of the component (before any conditionals)
   const [activeSentimentBrand, setActiveSentimentBrand] = useState<Brand>('Nordstrom');
   const [activeTab, setActiveTab] = useState<'overview' | 'sentiment'>('overview');
-  const [activePlatform, setActivePlatform] = useState<'Instagram' | 'TikTok'>('Instagram');
+  
+  // Initialize activePlatform from filterOptions.platform or default to 'Instagram'
+  const [activePlatform, setActivePlatform] = useState<'Instagram' | 'TikTok'>(filterOptions.platform as 'Instagram' | 'TikTok' || 'Instagram');
+  
+  // Set Instagram as default platform if not already set
+  useEffect(() => {
+    if (!filterOptions.platform || filterOptions.platform === 'All') {
+      setFilterOptions({ ...filterOptions, platform: 'Instagram' });
+    }
+  }, []);
   const [selectedCompetitor, setSelectedCompetitor] = useState<Brand>('Macys');
   
   // Show loading state
@@ -825,7 +834,7 @@ const DashboardOverview: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Instagram KPIs */}
-            {activePlatform === 'Instagram' && (
+            {(filterOptions.platform === 'Instagram' || filterOptions.platform === 'All') && (
               <>
                 {/* Total Posts */}
                 <motion.div
@@ -952,7 +961,7 @@ const DashboardOverview: React.FC = () => {
             )}
             
             {/* TikTok KPIs */}
-            {activePlatform === 'TikTok' && (
+            {filterOptions.platform === 'TikTok' && (
               <>
                 {/* Total Posts */}
                 <motion.div
@@ -1170,7 +1179,7 @@ const DashboardOverview: React.FC = () => {
           </div>
           
           {/* Instagram Sentiment Analysis */}
-          {activePlatform === 'Instagram' && (
+          {filterOptions.platform === 'Instagram' && (
             <SentimentAnalysis 
               platform="Instagram" 
               selectedBrands={selectedBrands} 
@@ -1182,7 +1191,7 @@ const DashboardOverview: React.FC = () => {
           )}
           
           {/* TikTok Sentiment Analysis */}
-          {activePlatform === 'TikTok' && (
+          {filterOptions.platform === 'TikTok' && (
             <SentimentAnalysis 
               platform="TikTok" 
               selectedBrands={selectedBrands} 
@@ -1247,7 +1256,7 @@ const DashboardOverview: React.FC = () => {
           </div>
           
           {/* Instagram Engagement Analytics */}
-          {activePlatform === 'Instagram' && (
+          {filterOptions.platform === 'Instagram' && (
             <EngagementSection 
               platform="Instagram" 
               selectedBrands={selectedBrands} 
@@ -1259,7 +1268,7 @@ const DashboardOverview: React.FC = () => {
           )}
           
           {/* TikTok Engagement Analytics */}
-          {activePlatform === 'TikTok' && (
+          {filterOptions.platform === 'TikTok' && (
             <EngagementSection 
               platform="TikTok" 
               selectedBrands={selectedBrands} 
@@ -1323,7 +1332,7 @@ const DashboardOverview: React.FC = () => {
           </div>
           
           {/* Instagram Hashtag Analytics */}
-          {activePlatform === 'Instagram' && (
+          {filterOptions.platform === 'Instagram' && (
             <HashtagSection 
               platform="Instagram" 
               selectedBrands={selectedBrands} 
@@ -1335,7 +1344,7 @@ const DashboardOverview: React.FC = () => {
           )}
           
           {/* TikTok Hashtag Analytics */}
-          {activePlatform === 'TikTok' && (
+          {filterOptions.platform === 'TikTok' && (
             <HashtagSection 
               platform="TikTok" 
               selectedBrands={selectedBrands} 
@@ -1346,135 +1355,6 @@ const DashboardOverview: React.FC = () => {
             />
           )}
         </motion.div>
-      </div>
-      
-      {/* Social Platform Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        {/* Instagram Engagement Chart */}
-        {filterOptions.platform === 'Instagram' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-          >
-            <h3 className="text-lg font-semibold mb-4">Instagram Engagement by Brand</h3>
-            <div className="h-80">
-              {isChartDataEmpty(instagramEngagementChart) ? (
-                <EmptyChartFallback message="No Instagram engagement data available for the selected brands" />
-              ) : (
-                <Bar data={instagramEngagementChart} options={chartOptions} />
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* TikTok Engagement Chart */}
-        {filterOptions.platform === 'TikTok' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-          >
-            <h3 className="text-lg font-semibold mb-4">TikTok Engagement by Brand</h3>
-            <div className="h-80">
-              {isChartDataEmpty(tiktokEngagementChart) ? (
-                <EmptyChartFallback message="No TikTok engagement data available for the selected brands" />
-              ) : (
-                <Bar data={tiktokEngagementChart} options={chartOptions} />
-              )}
-            </div>
-          </motion.div>
-        )}
-        
-        {/* TikTok Reach Chart - NEW */}
-        {filterOptions.platform === 'TikTok' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-            className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-          >
-            <h3 className="text-lg font-semibold mb-4">TikTok Reach by Brand</h3>
-            <div className="h-80">
-              {/* Generate TikTok Reach chart data */}
-              {(() => {
-                // Create the chart data object
-                const tiktokReachData = {
-                  labels: selectedBrands,
-                  datasets: [
-                    {
-                      label: 'TikTok Reach',
-                      data: selectedBrands.map(brand => {
-                        const brandData = socialData.tiktok[brand];
-                        if (!brandData?.posts) return 0;
-
-                        return brandData.posts.reduce((sum, post) => {
-                          const views = Number(post?.playCount || 0);
-                          return sum + views;
-                        }, 0);
-                      }),
-                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                      borderColor: 'rgba(0, 0, 0, 1)',
-                      borderWidth: 1,
-                    }
-                  ]
-                };
-                
-                // Check if data is empty and render appropriate component
-                if (isChartDataEmpty(tiktokReachData)) {
-                  return <EmptyChartFallback message="No TikTok reach data available for the selected brands" />;
-                } else {
-                  return <Bar data={tiktokReachData} options={chartOptions} />;
-                }
-              })()}
-            </div>
-          </motion.div>
-        )}
-        
-        {/* TikTok Followers Chart - NEW */}
-        {filterOptions.platform === 'TikTok' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className={`rounded-lg p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}
-          >
-            <h3 className="text-lg font-semibold mb-4">TikTok Followers by Brand</h3>
-            <div className="h-80">
-              {(() => {
-                const followersChartData = generateTikTokFollowersChart(socialData.tiktok, selectedBrands);
-                return isChartDataEmpty(followersChartData) ? (
-                  <EmptyChartFallback message="No TikTok followers data available for the selected brands" />
-                ) : (
-                  <Bar 
-                    data={followersChartData}
-                    options={{
-                      ...chartOptions,
-                      plugins: {
-                        ...chartOptions.plugins,
-                        title: {
-                          display: true,
-                          text: 'TikTok Followers by Brand',
-                          color: darkMode ? 'white' : 'black',
-                        },
-                        tooltip: {
-                          ...chartOptions.plugins.tooltip,
-                          callbacks: {
-                            label: function(context) {
-                              return `Followers: ${formatNumber(context.raw as number)}`;
-                            }
-                          }
-                        }
-                      }
-                    }}
-                  />
-                )
-              })()}
-            </div>
-          </motion.div>
-        )}
       </div>
     </div>
   );

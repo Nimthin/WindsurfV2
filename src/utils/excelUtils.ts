@@ -74,6 +74,9 @@ export const readExcelFile = async (filePath: string): Promise<any[]> => {
  * @returns Processed Instagram data
  */
 export const fetchInstagramDataFromFile = async (brand: Brand): Promise<InstagramData> => {
+  if (brand === 'Ulta' || brand === 'Revolve') {
+    console.log(`[DEBUG] fetchInstagramDataFromFile called for brand: ${brand}`);
+  }
   const fileName = INSTAGRAM_FILE_NAMES[brand];
   if (!fileName) {
     // No Instagram file name defined for brand
@@ -84,19 +87,38 @@ export const fetchInstagramDataFromFile = async (brand: Brand): Promise<Instagra
   // Files in the public folder are served at the root path
   const filePath = `/Data/Instagram/${fileName}`;
 
+  if (brand === 'Ulta' || brand === 'Revolve') {
+    console.log(`[DEBUG] ${brand} - FilePath: ${filePath}`);
+  }
   
   try {
     const rawData = await readExcelFile(filePath);
 
+    if (brand === 'Ulta' || brand === 'Revolve') {
+      console.log(`[DEBUG] ${brand} - Raw data length: ${rawData.length}`);
+      if (rawData.length > 0) {
+        console.log(`[DEBUG] ${brand} - Raw data sample (first row): `, rawData[0]);
+      }
+    }
     
     // Convert raw data to the format expected by the application
     const posts = convertInstagramRawData(rawData, brand);
+
+    if (brand === 'Ulta' || brand === 'Revolve') {
+      console.log(`[DEBUG] ${brand} - Posts length: ${posts.length}`);
+      if (posts.length > 0) {
+        console.log(`[DEBUG] ${brand} - Posts sample (first post): `, posts[0]);
+      }
+    }
     
     return {
       brand,
       posts
     };
   } catch (error) {
+    if (brand === 'Ulta' || brand === 'Revolve') {
+      console.error(`[DEBUG] ${brand} - Error in fetchInstagramDataFromFile: `, error);
+    }
     // Error processing Instagram data
     return { brand, posts: [] };
   }
