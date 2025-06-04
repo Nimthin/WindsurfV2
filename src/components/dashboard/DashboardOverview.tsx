@@ -19,6 +19,7 @@ import {
   generateTikTokFollowersChart,
   generateEngagementRateChart
 } from '../../utils/chartUtils';
+import { formatKpiValue } from '../../utils'; // Import the new formatter
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import Sentiment from 'sentiment';
 import SentimentAnalysis from './SentimentAnalysis';
@@ -148,20 +149,41 @@ const DashboardOverview: React.FC = () => {
     // For calculating averages - Nordstrom
     let avgInstagramLikes = 0;
     let avgInstagramComments = 0;
-    let instagramEngagementRate = 0;
-    let avgTikTokViews = 0;
-    let avgTikTokLikes = 0;
-    let avgTikTokShares = 0;
-    let tikTokEngagementRate = 0;
+    let instagramEngagementRate = 0; // For video
     
-    // For calculating averages - Competitor
+    // Nordstrom TikTok accumulators
+    let nordstromTikTokTotalDigg = 0;
+    let nordstromTikTokTotalComments = 0; // New for ER and card
+    let nordstromTikTokTotalShares = 0;
+    let nordstromTikTokTotalCollects = 0; // New for ER
+    let nordstromTikTokTotalPlays = 0;
+    let nordstromTikTokPostCount = 0;
+
+    // Competitor metrics
     let competitorAvgInstagramLikes = 0;
     let competitorAvgInstagramComments = 0;
-    let competitorInstagramEngagementRate = 0;
-    let competitorAvgTikTokViews = 0;
-    let competitorAvgTikTokLikes = 0;
-    let competitorAvgTikTokShares = 0;
-    let competitorTikTokEngagementRate = 0;
+    let competitorInstagramEngagementRate = 0; // For video
+
+    // Competitor TikTok accumulators
+    let competitorTikTokTotalDigg = 0;
+    let competitorTikTokTotalComments = 0; // New for ER and card
+    let competitorTikTokTotalShares = 0;
+    let competitorTikTokTotalCollects = 0; // New for ER
+    let competitorTikTokTotalPlays = 0;
+    let competitorTikTokPostCount = 0;
+
+    // Overall totals for cards that were already there but now sourced from new accumulators
+    let totalTikTokViews = 0; // Will be nordstromTikTokTotalPlays
+    let totalTikTokLikes = 0; // Will be nordstromTikTokTotalDigg
+    let totalTikTokShares = 0; // Will be nordstromTikTokTotalShares
+    let totalTikTokComments = 0; // Will be nordstromTikTokTotalComments - for the KPI card
+    let totalTikTokPosts = 0; // Will be nordstromTikTokPostCount
+
+    let competitorTotalTikTokViews = 0;
+    let competitorTotalTikTokLikes = 0;
+    let competitorTotalTikTokShares = 0;
+    let competitorTotalTikTokComments = 0; // For the KPI card
+    let competitorTotalTikTokPosts = 0;
 
     try {
       selectedBrands.forEach(brand => {
@@ -207,55 +229,38 @@ const DashboardOverview: React.FC = () => {
         }
 
         // TikTok metrics
-        const tiktokData = socialData.tiktok[brand];
-        if (tiktokData && tiktokData.posts && Array.isArray(tiktokData.posts)) {
-          // Separate Nordstrom and competitor data
+        const currentTikTokData = socialData.tiktok[brand];
+        if (currentTikTokData?.posts) {
           if (brand === 'Nordstrom') {
-            tiktokData.posts.forEach(post => {
-              if (post) {
-                // Add basic metrics for Nordstrom
-                totalTikTokViews += post.playCount || 0;
-                totalTikTokLikes += post.diggCount || 0;
-                totalTikTokShares += post.shareCount || 0;
-                
-                // Track monthly engagement
-                if (post.createTime) {
-                  try {
-                    let date: Date;
-                    
-                    // Handle different date formats
-                    if (typeof post.createTime === 'string') {
-                      date = new Date(post.createTime);
-                    } else if (typeof post.createTime === 'number') {
-                      date = new Date(post.createTime * 1000); // Convert Unix timestamp to milliseconds
-                    } else {
-                      throw new Error('Invalid date format');
-                    }
-                    
-                    const month = date.toLocaleString('default', { month: 'long' });
-                    
-                    if (!monthlyEngagement[month]) {
-                      monthlyEngagement[month] = { instagram: 0, tiktok: 0 };
-                    }
-                    
-                    monthlyEngagement[month].tiktok += (post.diggCount || 0) + (post.commentCount || 0) + (post.shareCount || 0);
-                  } catch (e) {
-                    console.error('Error processing TikTok post date:', e);
-                  }
-                }
+            nordstromTikTokPostCount += currentTikTokData.posts.length;
+            currentTikTokData.posts.forEach(post => {
+              const typedPost = post as TikTokPost;
+              nordstromTikTokTotalPlays += Number(typedPost.playCount || 0);
+              nordstromTikTokTotalDigg += Number(typedPost.diggCount || 0);
+              nordstromTikTokTotalShares += Number(typedPost.shareCount || 0);
+              nordstromTikTokTotalComments += Number(typedPost.commentCount || 0);
+              nordstromTikTokTotalCollects += Number(typedPost.collectCount || 0);
+
+              // For monthly engagement tracking if still needed (can be simplified if only totals are used later)
+              if (typedPost.createTime) {
+                try {
+                  const date = new Date(typedPost.createTime); // Assuming createTime is valid date string or number
+                  const month = date.toLocaleString('default', { month: 'long' });
+                  if (!monthlyEngagement[month]) monthlyEngagement[month] = { instagram: 0, tiktok: 0 };
+                  monthlyEngagement[month].tiktok += (Number(typedPost.diggCount || 0) + Number(typedPost.commentCount || 0) + Number(typedPost.shareCount || 0));
+                } catch (e) { console.error('Error processing TikTok post date:', e); }
               }
             });
-            totalTikTokPosts += tiktokData.posts.length;
           } else if (brand === selectedCompetitor) {
-            // Add metrics for the selected competitor
-            tiktokData.posts.forEach(post => {
-              if (post) {
-                competitorTikTokViews += post.playCount || 0;
-                competitorTikTokLikes += post.diggCount || 0;
-                competitorTikTokShares += post.shareCount || 0;
-              }
+            competitorTikTokPostCount += currentTikTokData.posts.length;
+            currentTikTokData.posts.forEach(post => {
+              const typedPost = post as TikTokPost;
+              competitorTikTokTotalPlays += Number(typedPost.playCount || 0);
+              competitorTikTokTotalDigg += Number(typedPost.diggCount || 0);
+              competitorTikTokTotalShares += Number(typedPost.shareCount || 0);
+              competitorTikTokTotalComments += Number(typedPost.commentCount || 0);
+              competitorTikTokTotalCollects += Number(typedPost.collectCount || 0);
             });
-            competitorTikTokPosts += tiktokData.posts.length;
           }
         }
       });
@@ -286,75 +291,80 @@ const DashboardOverview: React.FC = () => {
     const rawNordstromVideoER = nordstromVideoViews > 0 ? ((nordstromVideoLikes + nordstromVideoComments) / nordstromVideoViews) * 100 : 0;
     instagramEngagementRate = parseFloat(rawNordstromVideoER.toFixed(1));
     
-    if (totalTikTokPosts > 0) {
-      avgTikTokViews = totalTikTokViews / totalTikTokPosts;
-      avgTikTokLikes = totalTikTokLikes / totalTikTokPosts;
-      avgTikTokShares = totalTikTokShares / totalTikTokPosts;
-      tikTokEngagementRate = ((totalTikTokLikes + totalTikTokShares) / totalTikTokPosts) / 100;
-    }
     
-    // Calculate averages and rates for competitor
-    // General averages for all Instagram posts for competitor
-    if (competitorInstagramPosts > 0) {
-      competitorAvgInstagramLikes = competitorInstagramLikes / competitorInstagramPosts; // Remains average for all posts
-      competitorAvgInstagramComments = parseFloat((competitorInstagramComments / competitorInstagramPosts).toFixed(1)); // Remains average for all posts
-    } else {
-      competitorAvgInstagramLikes = 0;
-      competitorAvgInstagramComments = 0.0;
-    }
+    // Calculate Engagement Rate for Nordstrom TikTok
+    const nordstromTikTokEngagementRate = nordstromTikTokTotalPlays > 0
+      ? ((nordstromTikTokTotalDigg + nordstromTikTokTotalComments + nordstromTikTokTotalShares + nordstromTikTokTotalCollects) / nordstromTikTokTotalPlays) * 100
+      : 0;
 
-    // Instagram Video Engagement Rate for Competitor
-    const competitorInstagramVideoPosts = socialData.instagram[selectedCompetitor]?.posts.filter(p => (p as InstagramPost).mediaType === 'Video') as InstagramPost[] || [];
-    let competitorVideoLikes = 0;
-    let competitorVideoComments = 0;
-    let competitorVideoViews = 0;
-    if (competitorInstagramVideoPosts.length > 0) {
-      competitorVideoLikes = competitorInstagramVideoPosts.reduce((sum, p) => sum + (p.likesCount || 0), 0);
-      competitorVideoComments = competitorInstagramVideoPosts.reduce((sum, p) => sum + (p.commentsCount || 0), 0);
-      competitorVideoViews = competitorInstagramVideoPosts.reduce((sum, p) => sum + (p.videoViewCount || 0), 0);
-    }
-    const rawCompetitorVideoER = competitorVideoViews > 0 ? ((competitorVideoLikes + competitorVideoComments) / competitorVideoViews) * 100 : 0;
-    competitorInstagramEngagementRate = parseFloat(rawCompetitorVideoER.toFixed(1));
+    // Calculate Engagement Rate for Competitor TikTok
+    const competitorTikTokEngagementRateCalc = competitorTikTokTotalPlays > 0
+      ? ((competitorTikTokTotalDigg + competitorTikTokTotalComments + competitorTikTokTotalShares + competitorTikTokTotalCollects) / competitorTikTokTotalPlays) * 100
+      : 0;
+
+    // Calculate averages for Nordstrom TikTok (for cards if needed, or can be removed if only total/ER is shown)
+    const avgTikTokViews = nordstromTikTokPostCount > 0 ? nordstromTikTokTotalPlays / nordstromTikTokPostCount : 0;
+    const avgTikTokLikes = nordstromTikTokPostCount > 0 ? nordstromTikTokTotalDigg / nordstromTikTokPostCount : 0;
+    const avgTikTokShares = nordstromTikTokPostCount > 0 ? nordstromTikTokTotalShares / nordstromTikTokPostCount : 0;
+    const avgTikTokCommentsNordstrom = nordstromTikTokPostCount > 0 ? nordstromTikTokTotalComments / nordstromTikTokPostCount : 0;
+
+
+    // Calculate averages for Competitor TikTok
+    const competitorAvgTikTokViews = competitorTikTokPostCount > 0 ? competitorTikTokTotalPlays / competitorTikTokPostCount : 0;
+    const competitorAvgTikTokLikes = competitorTikTokPostCount > 0 ? competitorTikTokTotalDigg / competitorTikTokPostCount : 0;
+    const competitorAvgTikTokShares = competitorTikTokPostCount > 0 ? competitorTikTokTotalShares / competitorTikTokPostCount : 0;
+    const competitorAvgTikTokComments = competitorTikTokPostCount > 0 ? competitorTikTokTotalComments / competitorTikTokPostCount : 0;
     
-    if (competitorTikTokPosts > 0) {
-      competitorAvgTikTokViews = competitorTikTokViews / competitorTikTokPosts;
-      competitorAvgTikTokLikes = competitorTikTokLikes / competitorTikTokPosts;
-      competitorAvgTikTokShares = competitorTikTokShares / competitorTikTokPosts;
-      competitorTikTokEngagementRate = ((competitorTikTokLikes + competitorTikTokShares) / competitorTikTokPosts) / 100;
-    }
-    
+    // Assign summed totals to the variables used by KPI cards
+    totalTikTokViews = nordstromTikTokTotalPlays;
+    totalTikTokLikes = nordstromTikTokTotalDigg;
+    totalTikTokShares = nordstromTikTokTotalShares;
+    totalTikTokComments = nordstromTikTokTotalComments; // For Nordstrom KPI card
+    totalTikTokPosts = nordstromTikTokPostCount;
+
+    competitorTotalTikTokViews = competitorTikTokTotalPlays;
+    competitorTotalTikTokLikes = competitorTikTokTotalDigg;
+    competitorTotalTikTokShares = competitorTikTokTotalShares;
+    competitorTotalTikTokComments = competitorTikTokTotalComments; // For Competitor KPI card
+    competitorTotalTikTokPosts = competitorTikTokPostCount;
+
+
     return {
       // Nordstrom metrics
       totalInstagramLikes,
       totalInstagramComments,
       totalInstagramPosts,
-      totalTikTokViews,
-      totalTikTokLikes,
-      totalTikTokShares,
-      totalTikTokPosts,
+      totalTikTokViews,    // Now sourced from nordstromTikTokTotalPlays
+      totalTikTokLikes,    // Now sourced from nordstromTikTokTotalDigg
+      totalTikTokShares,   // Now sourced from nordstromTikTokTotalShares
+      totalTikTokComments, // Newly added for Nordstrom card
+      totalTikTokPosts,    // Now sourced from nordstromTikTokPostCount
       avgInstagramLikes,
       avgInstagramComments,
-      instagramEngagementRate,
+      instagramEngagementRate, // IG Video ER
       avgTikTokViews,
       avgTikTokLikes,
       avgTikTokShares,
-      tikTokEngagementRate,
+      avgTikTokComments: avgTikTokCommentsNordstrom, // Avg comments for Nordstrom
+      tikTokEngagementRate: parseFloat(nordstromTikTokEngagementRate.toFixed(1)), // Nordstrom TikTok ER
       
       // Competitor metrics
       competitorInstagramLikes,
       competitorInstagramComments,
       competitorInstagramPosts,
-      competitorTikTokViews,
-      competitorTikTokLikes,
-      competitorTikTokShares,
-      competitorTikTokPosts,
+      competitorTikTokViews,    // Now sourced from competitorTikTokTotalPlays
+      competitorTikTokLikes,    // Now sourced from competitorTikTokTotalDigg
+      competitorTikTokShares,   // Now sourced from competitorTikTokTotalShares
+      competitorTotalTikTokComments, // Newly added for Competitor card
+      competitorTikTokPosts,    // Now sourced from competitorTikTokPostCount
       competitorAvgInstagramLikes,
       competitorAvgInstagramComments,
-      competitorInstagramEngagementRate,
+      competitorInstagramEngagementRate, // IG Video ER for Competitor
       competitorAvgTikTokViews,
       competitorAvgTikTokLikes,
       competitorAvgTikTokShares,
-      competitorTikTokEngagementRate,
+      competitorAvgTikTokComments, // Avg comments for Competitor
+      competitorTikTokEngagementRate: parseFloat(competitorTikTokEngagementRateCalc.toFixed(1)), // Competitor TikTok ER
       
       // Other metrics
       monthlyEngagement,
@@ -832,7 +842,7 @@ const DashboardOverview: React.FC = () => {
             </FormControl>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${filterOptions.platform === 'TikTok' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
             {/* Instagram KPIs */}
             {(filterOptions.platform === 'Instagram' || filterOptions.platform === 'All') && (
               <>
@@ -847,18 +857,18 @@ const DashboardOverview: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Posts</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalInstagramPosts)}</h3>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalInstagramPosts)}</h3>
                     </div>
                     <FaIcons.FaInstagram className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom</p>
-                      <p className="font-medium">{formatNumber(metrics.totalInstagramPosts)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.totalInstagramPosts)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor}</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorInstagramPosts)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorInstagramPosts)}</p>
                     </div>
                     {metrics.totalInstagramPosts > 0 && metrics.competitorInstagramPosts > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
@@ -885,18 +895,18 @@ const DashboardOverview: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Instagram Likes</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalInstagramLikes)}</h3>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalInstagramLikes)}</h3>
                     </div>
                     <AiIcons.AiFillHeart className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.avgInstagramLikes)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.avgInstagramLikes)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor} Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorAvgInstagramLikes)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorAvgInstagramLikes)}</p>
                     </div>
                     {metrics.avgInstagramLikes > 0 && metrics.competitorAvgInstagramLikes > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
@@ -923,18 +933,18 @@ const DashboardOverview: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Instagram Comments</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalInstagramComments)}</h3>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalInstagramComments)}</h3>
                     </div>
                     <FaIcons.FaComments className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.avgInstagramComments)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.avgInstagramComments)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor} Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorAvgInstagramComments)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorAvgInstagramComments)}</p>
                     </div>
                     {metrics.avgInstagramComments > 0 && metrics.competitorAvgInstagramComments > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
@@ -974,26 +984,26 @@ const DashboardOverview: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Posts</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokPosts)}</h3>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalTikTokPosts)}</h3>
                     </div>
                     <FaIcons.FaTiktok className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom</p>
-                      <p className="font-medium">{formatNumber(metrics.totalTikTokPosts)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.totalTikTokPosts)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor}</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorTikTokPosts)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorTikTokPosts)}</p>
                     </div>
                      {metrics.totalTikTokPosts > 0 && metrics.competitorTikTokPosts > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                         <p>
                           {metrics.totalTikTokPosts > metrics.competitorTikTokPosts 
-                            ? `Nordstrom has ${formatNumber(metrics.totalTikTokPosts - metrics.competitorTikTokPosts)} more posts.`
+                            ? `Nordstrom has ${formatNumber(metrics.totalTikTokPosts - metrics.competitorTikTokPosts)} more posts.` // Reverted to formatNumber
                             : metrics.totalTikTokPosts < metrics.competitorTikTokPosts
-                              ? `${metrics.selectedCompetitor} has ${formatNumber(metrics.competitorTikTokPosts - metrics.totalTikTokPosts)} more posts.`
+                              ? `${metrics.selectedCompetitor} has ${formatNumber(metrics.competitorTikTokPosts - metrics.totalTikTokPosts)} more posts.` // Reverted to formatNumber
                               : 'Equal number of posts.'}
                         </p>
                       </div>
@@ -1012,26 +1022,26 @@ const DashboardOverview: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Views</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokViews)}</h3>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalTikTokViews)}</h3>
                     </div>
                     <AiIcons.AiOutlineEye className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.avgTikTokViews)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.avgTikTokViews)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor} Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorAvgTikTokViews)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorAvgTikTokViews)}</p>
                     </div>
                     {metrics.avgTikTokViews > 0 && metrics.competitorAvgTikTokViews > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                         <p>
                           {metrics.avgTikTokViews > metrics.competitorAvgTikTokViews 
-                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokViews - metrics.competitorAvgTikTokViews)} more views.`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokViews - metrics.competitorAvgTikTokViews)} more views.` // Reverted to formatNumber
                             : metrics.avgTikTokViews < metrics.competitorAvgTikTokViews
-                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokViews - metrics.avgTikTokViews)} more views.`
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokViews - metrics.avgTikTokViews)} more views.` // Reverted to formatNumber
                               : 'Equal average views.'}
                         </p>
                       </div>
@@ -1050,26 +1060,26 @@ const DashboardOverview: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Likes</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokLikes)}</h3>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalTikTokLikes)}</h3>
                     </div>
                     <AiIcons.AiFillHeart className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.avgTikTokLikes)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.avgTikTokLikes)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor} Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorAvgTikTokLikes)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorAvgTikTokLikes)}</p>
                     </div>
                     {metrics.avgTikTokLikes > 0 && metrics.competitorAvgTikTokLikes > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                         <p>
                           {metrics.avgTikTokLikes > metrics.competitorAvgTikTokLikes 
-                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokLikes - metrics.competitorAvgTikTokLikes)} more likes.`
+                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokLikes - metrics.competitorAvgTikTokLikes)} more likes.` // Reverted to formatNumber
                             : metrics.avgTikTokLikes < metrics.competitorAvgTikTokLikes
-                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokLikes - metrics.avgTikTokLikes)} more likes.`
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokLikes - metrics.avgTikTokLikes)} more likes.` // Reverted to formatNumber
                               : 'Equal average likes.'}
                         </p>
                       </div>
@@ -1077,9 +1087,9 @@ const DashboardOverview: React.FC = () => {
                   </div>
                 </motion.div>
                 
-                {/* Total Shares */}
-                <motion.div
-                  custom={3}
+                {/* Total TikTok Comments KPI Card */}
+                 <motion.div
+                  custom={3} // Adjust custom index as needed
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
@@ -1087,28 +1097,28 @@ const DashboardOverview: React.FC = () => {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Shares</p>
-                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatNumber(metrics.totalTikTokShares)}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">TikTok Comments</p>
+                      <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{formatKpiValue(metrics.totalTikTokComments)}</h3>
                     </div>
-                    <FaIcons.FaShare className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
+                    <FaIcons.FaComments className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
                   </div>
                   <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                     <div className="flex justify-between">
                       <p>Nordstrom Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.avgTikTokShares)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.avgTikTokComments)}</p>
                     </div>
                     <div className="flex justify-between mt-1">
                       <p>{metrics.selectedCompetitor} Avg</p>
-                      <p className="font-medium">{formatNumber(metrics.competitorAvgTikTokShares)}</p>
+                      <p className="font-medium">{formatKpiValue(metrics.competitorAvgTikTokComments)}</p>
                     </div>
-                    {metrics.avgTikTokShares > 0 && metrics.competitorAvgTikTokShares > 0 && (
+                    {metrics.avgTikTokComments > 0 && metrics.competitorAvgTikTokComments > 0 && (
                       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                         <p>
-                          {metrics.avgTikTokShares > metrics.competitorAvgTikTokShares 
-                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokShares - metrics.competitorAvgTikTokShares)} more shares.`
-                            : metrics.avgTikTokShares < metrics.competitorAvgTikTokShares
-                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokShares - metrics.avgTikTokShares)} more shares.`
-                              : 'Equal average shares.'}
+                          {metrics.avgTikTokComments > metrics.competitorAvgTikTokComments
+                            ? `Nordstrom averages ${formatNumber(metrics.avgTikTokComments - metrics.competitorAvgTikTokComments)} more comments.` // Reverted to formatNumber
+                            : metrics.avgTikTokComments < metrics.competitorAvgTikTokComments
+                              ? `${metrics.selectedCompetitor} averages ${formatNumber(metrics.competitorAvgTikTokComments - metrics.avgTikTokComments)} more comments.` // Reverted to formatNumber
+                              : 'Equal average comments.'}
                         </p>
                       </div>
                     )}

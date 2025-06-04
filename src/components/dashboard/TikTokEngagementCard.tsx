@@ -9,12 +9,33 @@ interface TikTokEngagementCardProps {
   cardVariants: any;
 }
 
+import { formatKpiValue } from '../../utils'; // Import the formatter
+
 const TikTokEngagementCard: React.FC<TikTokEngagementCardProps> = ({
   tikTokEngagementRate,
   competitorTikTokEngagementRate,
   selectedCompetitor,
   cardVariants
 }) => {
+  // The tikTokEngagementRate from calculateTotalMetrics is already a percentage value (e.g., 10.5 for 10.5%)
+  // and formatted to 1 decimal place. formatKpiValue will handle toFixed(2) and add '%'.
+  const nordstromERDisplay = formatKpiValue(tikTokEngagementRate, true);
+  const competitorERDisplay = formatKpiValue(competitorTikTokEngagementRate, true);
+
+  let differenceText = 'Equal engagement rates.';
+  if (tikTokEngagementRate !== null && competitorTikTokEngagementRate !== null && !isNaN(Number(tikTokEngagementRate)) && !isNaN(Number(competitorTikTokEngagementRate))) {
+    const difference = Number(tikTokEngagementRate) - Number(competitorTikTokEngagementRate);
+    if (difference !== 0) {
+      const formattedDifference = formatKpiValue(Math.abs(difference), true);
+      if (difference > 0) {
+        differenceText = `Nordstrom has ${formattedDifference} higher engagement.`;
+      } else {
+        differenceText = `${selectedCompetitor} has ${formattedDifference} higher engagement.`;
+      }
+    }
+  }
+
+
   return (
     <motion.div
       custom={4} // Ensure this custom index is unique if used with others in the same list
@@ -26,27 +47,23 @@ const TikTokEngagementCard: React.FC<TikTokEngagementCardProps> = ({
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Engagement Rate (TikTok)</p>
-          <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{(tikTokEngagementRate * 100).toFixed(2)}%</h3>
+          <h3 className="text-3xl font-bold text-nordstrom-blue mt-1">{nordstromERDisplay}</h3>
         </div>
         <BiIcons.BiTrendingUp className="text-3xl text-nordstrom-blue/70 dark:text-nordstrom-blue/60" />
       </div>
       <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
         <div className="flex justify-between">
           <p>Nordstrom</p>
-          <p className="font-medium">{(tikTokEngagementRate * 100).toFixed(2)}%</p>
+          <p className="font-medium">{nordstromERDisplay}</p>
         </div>
         <div className="flex justify-between mt-1">
           <p>{selectedCompetitor}</p>
-          <p className="font-medium">{(competitorTikTokEngagementRate * 100).toFixed(2)}%</p>
+          <p className="font-medium">{competitorERDisplay}</p>
         </div>
-        {tikTokEngagementRate > 0 && competitorTikTokEngagementRate > 0 && (
+        {nordstromERDisplay !== "N/A" && competitorERDisplay !== "N/A" && (
           <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
             <p>
-              {tikTokEngagementRate > competitorTikTokEngagementRate 
-                ? `Nordstrom has ${((tikTokEngagementRate - competitorTikTokEngagementRate) * 100).toFixed(2)}% higher engagement.`
-                : tikTokEngagementRate < competitorTikTokEngagementRate
-                  ? `${selectedCompetitor} has ${((competitorTikTokEngagementRate - tikTokEngagementRate) * 100).toFixed(2)}% higher engagement.`
-                  : 'Equal engagement rates.'}
+              {differenceText}
             </p>
           </div>
         )}
