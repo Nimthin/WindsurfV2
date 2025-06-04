@@ -144,96 +144,95 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
       };
     } else { // TikTok
       if (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all')) {
-        // "All Months" View: Bar Chart of Average Engagement Rates
-        const avgEngagementRates = selectedBrands.map(brand => {
+        // "All Months" View: Bar Chart of Aggregate Engagement Rate per Brand for the entire period
+        const totalPeriodAggregatedER = selectedBrands.map(brand => {
           const brandTikTokPosts = (posts[brand] || []) as TikTokPost[];
           if (brandTikTokPosts.length === 0) {
-            return { brandName: brand, avgEngagementRate: 0, postCount: 0 };
+            return { brandName: brand, engagementRate: 0 };
           }
-          const totalEngagementRateSum = brandTikTokPosts.reduce((sum, post) => sum + (post.engagementRate || 0), 0);
+
+          let totalDiggCount = 0;
+          let totalCommentCount = 0;
+          let totalShareCount = 0;
+          let totalCollectCount = 0;
+          let totalPlayCount = 0;
+
+          brandTikTokPosts.forEach(post => { // These posts are for the entire "All (Feb-May)" period
+            totalDiggCount += Number(post.diggCount || 0);
+            totalCommentCount += Number(post.commentCount || 0);
+            totalShareCount += Number(post.shareCount || 0);
+            totalCollectCount += Number(post.collectCount || 0);
+            totalPlayCount += Number(post.playCount || 0);
+          });
+
+          const totalEngagementRate = totalPlayCount > 0
+            ? ((totalDiggCount + totalCommentCount + totalShareCount + totalCollectCount) / totalPlayCount) * 100
+            : 0;
+
           return {
             brandName: brand,
-            avgEngagementRate: parseFloat((totalEngagementRateSum / brandTikTokPosts.length).toFixed(2)),
-            postCount: brandTikTokPosts.length
+            engagementRate: parseFloat(totalEngagementRate.toFixed(2)),
           };
         });
 
         return {
-          labels: avgEngagementRates.map(data => data.brandName),
+          labels: totalPeriodAggregatedER.map(data => data.brandName),
           datasets: [
             {
-              label: 'Average Engagement Rate (%)',
-              data: avgEngagementRates.map(data => data.avgEngagementRate),
-              backgroundColor: generateColors(selectedBrands), // Use generateColors from chartUtils
-              borderColor: generateColors(selectedBrands), // Use the same array of colors for border
+              // Title will be "TikTok Average Engagement Rate by Brand" but this is now an aggregate, not an average of ERs.
+              // Consider renaming the title or this label if distinction is critical.
+              // For now, keeping dataset label simple.
+              label: 'Overall Engagement Rate (%)',
+              data: totalPeriodAggregatedER.map(data => data.engagementRate),
+              backgroundColor: generateColors(selectedBrands),
+              borderColor: generateColors(selectedBrands),
               borderWidth: 1,
             },
           ],
         };
       } else {
-        // Single Month View: Line Chart of Engagement Rates Over Time
-        let allDates = new Set<string>();
-        selectedBrands.forEach(brand => {
+        // Single Month View: Bar Chart of Aggregate Engagement Rate per Brand for that Month
+        const monthlyAggregatedER = selectedBrands.map(brand => {
           const brandTikTokPosts = (posts[brand] || []) as TikTokPost[];
-          brandTikTokPosts.forEach(post => {
-            if (post.createTime) {
-              try {
-                const date = new Date(post.createTime); // Assumes createTime is a valid date string or number
-                if (!isNaN(date.getTime())) {
-                   allDates.add(date.toISOString().split('T')[0]);
-                }
-              } catch (e) {
-                console.error("Error parsing date for TikTok post:", post.createTime, e);
-              }
-            }
-          });
-        });
-        const sortedDates = Array.from(allDates).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
+          if (brandTikTokPosts.length === 0) {
+            return { brandName: brand, engagementRate: 0 };
+          }
 
-        const datasets = selectedBrands.map((brand, index) => {
-          const brandTikTokPosts = (posts[brand] || []) as TikTokPost[];
-          const ratesByDate: { [date: string]: number[] } = {};
+          let totalDiggCount = 0;
+          let totalCommentCount = 0;
+          let totalShareCount = 0;
+          let totalCollectCount = 0;
+          let totalPlayCount = 0;
 
           brandTikTokPosts.forEach(post => {
-            if (post.createTime && typeof post.engagementRate === 'number') {
-               try {
-                const date = new Date(post.createTime);
-                if (!isNaN(date.getTime())) {
-                  const dateStr = date.toISOString().split('T')[0];
-                  if (!ratesByDate[dateStr]) ratesByDate[dateStr] = [];
-                  ratesByDate[dateStr].push(post.engagementRate);
-                }
-              } catch (e) {
-                 console.error("Error parsing date for TikTok post:", post.createTime, e);
-              }
-            }
+            totalDiggCount += Number(post.diggCount || 0);
+            totalCommentCount += Number(post.commentCount || 0);
+            totalShareCount += Number(post.shareCount || 0);
+            totalCollectCount += Number(post.collectCount || 0);
+            totalPlayCount += Number(post.playCount || 0);
           });
 
-          const dataForChart = sortedDates.map(dateStr => {
-            const rates = ratesByDate[dateStr];
-            if (rates && rates.length > 0) {
-              return parseFloat((rates.reduce((s, r) => s + r, 0) / rates.length).toFixed(2)); // Average ER for the day if multiple posts
-            }
-            return null; // Use null for days with no data to create gaps in the line
-          });
+          const monthlyEngagementRate = totalPlayCount > 0
+            ? ((totalDiggCount + totalCommentCount + totalShareCount + totalCollectCount) / totalPlayCount) * 100
+            : 0;
 
           return {
-            label: `${brand} Engagement Rate (%)`,
-            data: dataForChart,
-            borderColor: getColorByBrand(brand, index), // Use getColorByBrand
-            backgroundColor: getColorByBrand(brand, index), // Use getColorByBrand
-            fill: false,
-            tension: 0.1,
+            brandName: brand,
+            engagementRate: parseFloat(monthlyEngagementRate.toFixed(2)),
           };
         });
 
         return {
-          labels: sortedDates.map(dateStr => { // Format date for display
-            try {
-              return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            } catch (e) { return dateStr; }
-          }),
-          datasets,
+          labels: monthlyAggregatedER.map(data => data.brandName),
+          datasets: [
+            {
+              label: `Engagement Rate (%) - ${filterOptions?.selectedMonth || ''}`, // Simplified label
+              data: monthlyAggregatedER.map(data => data.engagementRate),
+              backgroundColor: generateColors(selectedBrands),
+              borderColor: generateColors(selectedBrands),
+              borderWidth: 1,
+            },
+          ],
         };
       }
     }
@@ -321,8 +320,9 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
     return options;
   }, [darkMode]);
 
-  // Determine which chart type to render for TikTok based on month filter
-  const TikTokChartComponent = (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all')) ? Bar : Line;
+  // For TikTok, both "All Months" and "Single Month" views will now use a Bar chart.
+  // The distinction is in the data aggregation (average of daily/post ERs vs. aggregate ER for the month).
+  const TikTokChartComponent = Bar;
 
   return (
     // Removed p-4 from root, padding is handled by parent card in DashboardOverview
@@ -349,16 +349,22 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
         {/* Video Engagement Chart (Instagram or TikTok) */}
         <div className={`p-4 rounded-lg shadow ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'} w-full`}>
           <h3 className={`text-md font-semibold mb-3 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-            {platform === 'Instagram' ? 'Instagram Video Engagement Rate' :
-             (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all')) ? 'TikTok Average Engagement Rate' : 'TikTok Engagement Rate Trend'}
+            {platform === 'Instagram'
+              ? 'Instagram Video Engagement Rate'
+              // Updated title logic for TikTok
+              : (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all'))
+                ? 'TikTok Overall Engagement Rate by Brand' // Changed from "Average"
+                : `TikTok Engagement Rate by Brand - ${filterOptions?.selectedMonth || ''}`}
           </h3>
           <div className="h-80">
             {!hasData || videoEngagementData.labels.length === 0 ? (
               <EmptyChartFallback message={`No ${platform === 'Instagram' ? 'video post' : 'TikTok'} data available`} />
             ) : (
-              platform === 'Instagram' ?
-                <Line data={videoEngagementData as ChartData<'line'>} options={commonChartOptions as ChartOptions<'line'>} /> :
-                <TikTokChartComponent data={videoEngagementData as ChartData<any>} options={commonChartOptions as ChartOptions<any>} />
+              platform === 'Instagram' ? (
+                <Line data={videoEngagementData as ChartData<'line'>} options={commonChartOptions as ChartOptions<'line'>} />
+              ) : (
+                <Bar data={videoEngagementData as ChartData<'bar'>} options={commonChartOptions as ChartOptions<'bar'>} />
+              )
             )}
           </div>
         </div>
