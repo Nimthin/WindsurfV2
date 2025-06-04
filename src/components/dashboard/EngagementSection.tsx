@@ -19,6 +19,7 @@ import { Brand, InstagramPost, TikTokPost, SocialPlatform } from '../../types';
 import EmptyChartFallback from '../common/EmptyChartFallback';
 // FormControl, InputLabel, MenuItem, Select removed as competitor selection is removed
 import { useSocialData } from '../../context/SocialDataContext';
+import { getColorByBrand, generateColors } from '../../utils/chartUtils';
 
 // Register ChartJS components
 ChartJS.register(
@@ -45,24 +46,10 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
   selectedBrands, 
   posts 
 }) => {
-  // Get dark mode from context
-  const { darkMode = false } = useSocialData() || {};
+  // Get dark mode and filterOptions from context
+  const { darkMode = false, filterOptions } = useSocialData() || {};
   
-  // Vibrant color palette - more visible than pastel
-  const vibrantColors = [
-    'rgba(66, 133, 244, 0.8)',   // Google Blue
-    'rgba(219, 68, 55, 0.8)',    // Google Red
-    'rgba(244, 180, 0, 0.8)',    // Google Yellow
-    'rgba(15, 157, 88, 0.8)',    // Google Green
-    'rgba(171, 71, 188, 0.8)',   // Purple
-    'rgba(255, 112, 67, 0.8)',   // Deep Orange
-    'rgba(3, 169, 244, 0.8)',    // Light Blue
-    'rgba(0, 188, 212, 0.8)',    // Cyan
-    'rgba(139, 195, 74, 0.8)',   // Light Green
-    'rgba(255, 193, 7, 0.8)',    // Amber
-    'rgba(121, 85, 72, 0.8)',    // Brown
-    'rgba(96, 125, 139, 0.8)',   // Blue Grey
-  ];
+  // Removed local vibrantColors array, will use generateColors or getColorByBrand from chartUtils
 
   // Removed mainBrand and selectedCompetitor state
 
@@ -117,66 +104,37 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
 
   type TikTokBrandData = {
     brandName: Brand;
-    metrics: Array<{ label: string; value: number }>;
+    avgEngagementRate?: number; // For Bar chart (All Months)
+    engagementRatesOverTime?: { date: string; rate: number }[]; // For Line chart (Single Month)
     postCount: number;
   };
 
-  // Video Engagement Data (Instagram: Line chart, TikTok: Bar chart)
+  // Video Engagement Data (Instagram: Line chart, TikTok: Bar or Line chart)
   const videoEngagementData = useMemo(() => {
     if (!hasData) {
       return { labels: [], datasets: [] };
     }
 
-    const processedBrandData = selectedBrands.map(brand => {
-      const brandPosts = posts[brand] || [];
-      let filteredPosts = brandPosts;
-
-      if (platform === 'Instagram') {
-        filteredPosts = brandPosts.filter(post => (post as InstagramPost).mediaType === 'Video');
-      }
-
-      if (filteredPosts.length === 0) return null; // Skip brands with no relevant posts
-
-      if (platform === 'Instagram') {
-        const totalLikes = filteredPosts.reduce((sum, post) => sum + ((post as InstagramPost).likesCount || 0), 0);
-        const totalComments = filteredPosts.reduce((sum, post) => sum + ((post as InstagramPost).commentsCount || 0), 0);
-        const totalViews = filteredPosts.reduce((sum, post) => sum + ((post as InstagramPost).videoViewCount || 0), 0);
-        const rate = totalViews > 0 ? parseFloat((((totalLikes + totalComments) / totalViews) * 100).toFixed(1)) : 0;
-        return { brandName: brand, engagementRate: rate, postCount: filteredPosts.length };
-      } else { // TikTok
-        const totalLikes = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).diggCount || 0), 0);
-        const totalComments = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).commentCount || 0), 0);
-        const totalShares = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).shareCount || 0), 0);
-        const totalViews = filteredPosts.reduce((sum, post) => sum + ((post as TikTokPost).playCount || 0), 0);
-        const engagementRate = totalViews > 0 ? parseFloat((((totalLikes + totalComments + totalShares) / totalViews) * 100).toFixed(1)) : 0;
-        return {
-          brandName: brand,
-          metrics: [ // For TikTok Bar chart
-            { label: 'Avg. Likes', value: filteredPosts.length > 0 ? totalLikes / filteredPosts.length : 0 },
-            { label: 'Avg. Comments', value: filteredPosts.length > 0 ? totalComments / filteredPosts.length : 0 },
-            { label: 'Avg. Shares', value: filteredPosts.length > 0 ? totalShares / filteredPosts.length : 0 },
-            { label: 'Engagement Rate (%)', value: engagementRate }
-          ],
-          postCount: filteredPosts.length
-        };
-      }
-    }).filter(Boolean);
-
-    // Safe type casting after filtering out null values
-    const typedBrandData = processedBrandData as (InstagramBrandData | TikTokBrandData)[];
-    
     if (platform === 'Instagram') {
-      // Type guard to ensure we're working with Instagram data
-      const instagramData = typedBrandData.filter((data): data is InstagramBrandData => 
-        'engagementRate' in data && !('metrics' in data)
-      );
+      const processedBrandData = selectedBrands.map(brand => {
+        const brandPosts = (posts[brand] || []) as InstagramPost[];
+        const videoPosts = brandPosts.filter(post => post.mediaType === 'Video');
+
+        if (videoPosts.length === 0) return null;
+
+        const totalLikes = videoPosts.reduce((sum, post) => sum + (post.likesCount || 0), 0);
+        const totalComments = videoPosts.reduce((sum, post) => sum + (post.commentsCount || 0), 0);
+        const totalViews = videoPosts.reduce((sum, post) => sum + (post.videoViewCount || 0), 0);
+        const rate = totalViews > 0 ? parseFloat((((totalLikes + totalComments) / totalViews) * 100).toFixed(1)) : 0;
+        return { brandName: brand, engagementRate: rate, postCount: videoPosts.length };
+      }).filter(Boolean) as InstagramBrandData[];
       
       return {
-        labels: instagramData.map(data => data.brandName),
+        labels: processedBrandData.map(data => data.brandName),
         datasets: [
           {
             label: 'Video Engagement Rate (%)',
-            data: instagramData.map(data => data.engagementRate),
+            data: processedBrandData.map(data => data.engagementRate),
             borderColor: '#004170',
             backgroundColor: 'rgba(0, 65, 112, 0.1)',
             fill: true,
@@ -185,46 +143,101 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
         ],
       };
     } else { // TikTok
-      // Type guard to ensure we're working with TikTok data
-      const tiktokData = typedBrandData.filter((data): data is TikTokBrandData => 
-        'metrics' in data
-      );
-      
-      return {
-        labels: tiktokData.map(data => data.brandName),
-        datasets: [ // Assuming original structure for TikTok bar chart is preferred
-          {
-            label: 'Avg. Likes',
-            data: tiktokData.map(data => data.metrics[0].value),
-            backgroundColor: vibrantColors[0],
-            borderColor: vibrantColors[0].replace('0.8', '1'),
-            borderWidth: 1,
-          },
-          {
-            label: 'Avg. Comments',
-            data: tiktokData.map(data => data.metrics[1].value),
-            backgroundColor: vibrantColors[1],
-            borderColor: vibrantColors[1].replace('0.8', '1'),
-            borderWidth: 1,
-          },
-          {
-            label: 'Avg. Shares',
-            data: tiktokData.map(data => data.metrics[2].value),
-            backgroundColor: vibrantColors[2],
-            borderColor: vibrantColors[2].replace('0.8', '1'),
-            borderWidth: 1,
-          },
-          {
-            label: 'Engagement Rate (%)',
-            data: tiktokData.map(data => data.metrics[3].value),
-            backgroundColor: vibrantColors[3],
-            borderColor: vibrantColors[3].replace('0.8', '1'),
-            borderWidth: 1,
-          },
-        ],
-      };
+      if (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all')) {
+        // "All Months" View: Bar Chart of Average Engagement Rates
+        const avgEngagementRates = selectedBrands.map(brand => {
+          const brandTikTokPosts = (posts[brand] || []) as TikTokPost[];
+          if (brandTikTokPosts.length === 0) {
+            return { brandName: brand, avgEngagementRate: 0, postCount: 0 };
+          }
+          const totalEngagementRateSum = brandTikTokPosts.reduce((sum, post) => sum + (post.engagementRate || 0), 0);
+          return {
+            brandName: brand,
+            avgEngagementRate: parseFloat((totalEngagementRateSum / brandTikTokPosts.length).toFixed(2)),
+            postCount: brandTikTokPosts.length
+          };
+        });
+
+        return {
+          labels: avgEngagementRates.map(data => data.brandName),
+          datasets: [
+            {
+              label: 'Average Engagement Rate (%)',
+              data: avgEngagementRates.map(data => data.avgEngagementRate),
+              backgroundColor: generateColors(selectedBrands), // Use generateColors from chartUtils
+              borderColor: generateColors(selectedBrands), // Use the same array of colors for border
+              borderWidth: 1,
+            },
+          ],
+        };
+      } else {
+        // Single Month View: Line Chart of Engagement Rates Over Time
+        let allDates = new Set<string>();
+        selectedBrands.forEach(brand => {
+          const brandTikTokPosts = (posts[brand] || []) as TikTokPost[];
+          brandTikTokPosts.forEach(post => {
+            if (post.createTime) {
+              try {
+                const date = new Date(post.createTime); // Assumes createTime is a valid date string or number
+                if (!isNaN(date.getTime())) {
+                   allDates.add(date.toISOString().split('T')[0]);
+                }
+              } catch (e) {
+                console.error("Error parsing date for TikTok post:", post.createTime, e);
+              }
+            }
+          });
+        });
+        const sortedDates = Array.from(allDates).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
+
+        const datasets = selectedBrands.map((brand, index) => {
+          const brandTikTokPosts = (posts[brand] || []) as TikTokPost[];
+          const ratesByDate: { [date: string]: number[] } = {};
+
+          brandTikTokPosts.forEach(post => {
+            if (post.createTime && typeof post.engagementRate === 'number') {
+               try {
+                const date = new Date(post.createTime);
+                if (!isNaN(date.getTime())) {
+                  const dateStr = date.toISOString().split('T')[0];
+                  if (!ratesByDate[dateStr]) ratesByDate[dateStr] = [];
+                  ratesByDate[dateStr].push(post.engagementRate);
+                }
+              } catch (e) {
+                 console.error("Error parsing date for TikTok post:", post.createTime, e);
+              }
+            }
+          });
+
+          const dataForChart = sortedDates.map(dateStr => {
+            const rates = ratesByDate[dateStr];
+            if (rates && rates.length > 0) {
+              return parseFloat((rates.reduce((s, r) => s + r, 0) / rates.length).toFixed(2)); // Average ER for the day if multiple posts
+            }
+            return null; // Use null for days with no data to create gaps in the line
+          });
+
+          return {
+            label: `${brand} Engagement Rate (%)`,
+            data: dataForChart,
+            borderColor: getColorByBrand(brand, index), // Use getColorByBrand
+            backgroundColor: getColorByBrand(brand, index), // Use getColorByBrand
+            fill: false,
+            tension: 0.1,
+          };
+        });
+
+        return {
+          labels: sortedDates.map(dateStr => { // Format date for display
+            try {
+              return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } catch (e) { return dateStr; }
+          }),
+          datasets,
+        };
+      }
     }
-  }, [platform, selectedBrands, posts, hasData, vibrantColors]);
+  }, [platform, selectedBrands, posts, hasData, filterOptions]);
 
   // Removed engagementDistributionData useMemo hook
 
@@ -246,7 +259,19 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
         tooltip: {
           titleColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
           bodyColor: darkMode ? 'rgba(255, 255, 255, 0.9)' : undefined,
-          backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : undefined
+          backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.8)' : undefined,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                label += context.parsed.y.toFixed(2) + '%';
+              }
+              return label;
+            }
+          }
         }
       },
       scales: {
@@ -264,7 +289,10 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
             color: darkMode ? 'rgba(255, 255, 255, 0.1)' : undefined
           },
           ticks: {
-            color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined
+            color: darkMode ? 'rgba(255, 255, 255, 0.7)' : undefined,
+            callback: function(value) {
+              return value + '%';
+            }
           }
         }
       }
@@ -293,6 +321,9 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
     return options;
   }, [darkMode]);
 
+  // Determine which chart type to render for TikTok based on month filter
+  const TikTokChartComponent = (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all')) ? Bar : Line;
+
   return (
     // Removed p-4 from root, padding is handled by parent card in DashboardOverview
     <div>
@@ -318,7 +349,8 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
         {/* Video Engagement Chart (Instagram or TikTok) */}
         <div className={`p-4 rounded-lg shadow ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'} w-full`}>
           <h3 className={`text-md font-semibold mb-3 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-            {platform === 'Instagram' ? 'Instagram Video Engagement Rate' : 'TikTok Engagement'}
+            {platform === 'Instagram' ? 'Instagram Video Engagement Rate' :
+             (filterOptions && filterOptions.selectedMonth && filterOptions.selectedMonth.toLowerCase().includes('all')) ? 'TikTok Average Engagement Rate' : 'TikTok Engagement Rate Trend'}
           </h3>
           <div className="h-80">
             {!hasData || videoEngagementData.labels.length === 0 ? (
@@ -326,7 +358,7 @@ const EngagementSection: React.FC<EngagementSectionProps> = ({
             ) : (
               platform === 'Instagram' ?
                 <Line data={videoEngagementData as ChartData<'line'>} options={commonChartOptions as ChartOptions<'line'>} /> :
-                <Bar data={videoEngagementData as ChartData<'bar'>} options={commonChartOptions as ChartOptions<'bar'>} />
+                <TikTokChartComponent data={videoEngagementData as ChartData<any>} options={commonChartOptions as ChartOptions<any>} />
             )}
           </div>
         </div>

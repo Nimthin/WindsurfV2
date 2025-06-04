@@ -3,29 +3,56 @@ import { format } from 'date-fns';
 import Sentiment from 'sentiment';
 
 // Color palette for charts (brand-specific colors)
+// Updated with a more diverse palette
 const BRAND_COLORS: Record<Brand, string> = {
-  'Nordstrom': '#0A2342', // nordstrom-navy
-  'Macys': '#718096', // gray-600
-  'Saks': '#718096', // gray-600
-  'Bloomingdales': '#718096', // gray-600
-  'Tjmaxx': '#718096', // gray-600
-  'Sephora': '#718096', // gray-600
-  'Ulta': '#718096', // gray-600
-  'Aritzia': '#718096', // gray-600
-  'American Eagle': '#718096', // gray-600
-  'Walmart': '#718096', // gray-600
-  'Amazon Beauty': '#718096', // gray-600
-  'Revolve': '#718096' // gray-600
+  'Nordstrom': '#0A2342',      // nordstrom-navy
+  'Macys': '#E60000',          // Macy's Red
+  'Saks': '#000000',           // Saks Black
+  'Bloomingdales': '#FDBB30',  // Bloomingdale's Yellow
+  'Tjmaxx': '#0071CE',         // TJMaxx Blue
+  'Sephora': '#D9298A',        // Sephora Pink
+  'Ulta': '#FF69B4',           // Ulta Pink
+  'Aritzia': '#A9A9A9',        // Aritzia Gray (placeholder, can be refined)
+  'American Eagle': '#0073CF', // AE Blue
+  'Walmart': '#0071CE',         // Walmart Blue (same as TJMaxx, consider differentiating)
+  'Amazon Beauty': '#FF9900',  // Amazon Orange
+  'Revolve': '#CC0000',        // Revolve Red
 };
 
 // Generate colors for multiple datasets
 export const generateColors = (brands: Brand[]): string[] => {
-  return brands.map(brand => BRAND_COLORS[brand]);
+  const defaultColor = '#888888'; // Default gray for brands not in BRAND_COLORS
+  const vibrantFallbacks = [ // Fallback for when BRAND_COLORS runs out or for unlisted brands
+    'rgba(66, 133, 244, 0.8)',   // Google Blue
+    'rgba(219, 68, 55, 0.8)',    // Google Red
+    'rgba(244, 180, 0, 0.8)',    // Google Yellow
+    'rgba(15, 157, 88, 0.8)',    // Google Green
+    'rgba(171, 71, 188, 0.8)',   // Purple
+    'rgba(255, 112, 67, 0.8)',   // Deep Orange
+    'rgba(3, 169, 244, 0.8)',    // Light Blue
+    'rgba(0, 188, 212, 0.8)',    // Cyan
+    'rgba(139, 195, 74, 0.8)',   // Light Green
+    'rgba(255, 193, 7, 0.8)',    // Amber
+  ];
+  return brands.map((brand, index) => BRAND_COLORS[brand] || vibrantFallbacks[index % vibrantFallbacks.length] || defaultColor);
 };
 
 // Get color for a specific brand
-export const getColorByBrand = (brand: Brand): string => {
-  return BRAND_COLORS[brand] || '#888888'; // Default gray if brand not found
+export const getColorByBrand = (brand: Brand, index?: number): string => {
+  const defaultColor = '#888888';
+   const vibrantFallbacks = [
+    'rgba(66, 133, 244, 0.8)', 'rgba(219, 68, 55, 0.8)', 'rgba(244, 180, 0, 0.8)',
+    'rgba(15, 157, 88, 0.8)', 'rgba(171, 71, 188, 0.8)', 'rgba(255, 112, 67, 0.8)',
+    'rgba(3, 169, 244, 0.8)', 'rgba(0, 188, 212, 0.8)', 'rgba(139, 195, 74, 0.8)',
+    'rgba(255, 193, 7, 0.8)',
+  ];
+  if (BRAND_COLORS[brand]) {
+    return BRAND_COLORS[brand];
+  }
+  if (index !== undefined) {
+    return vibrantFallbacks[index % vibrantFallbacks.length];
+  }
+  return defaultColor;
 };
 
 // Generate Instagram likes vs comments chart data
